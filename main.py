@@ -21,7 +21,8 @@ def process_video(video_path):
 
     new_video = f"acap_{video_path}"
     #new_video = os.path.basename(video_path).split(".")[0] + "_new.mp4"
-    subprocess.call(['ffmpeg', '-y', '-i', video_path, '-i', new_audio[0], '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-strict', 'experimental', f"static/{new_video}"])
+    subprocess.call(['ffmpeg', '-y', '-i', video_path, '-i', new_audio[0], '-map', '0:v', '-map', '1:a', 
+                     '-c:v', 'copy', '-c:a', 'aac', '-strict', 'experimental', f"{new_video}"])
     return new_video
 
 
