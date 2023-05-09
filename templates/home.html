@@ -68,12 +68,19 @@
     {% for item in videos %}
         <li>{{ item }}</li>  
     {% endfor %}
+    </ul>
 
     <h1>音频</h1>
     <ul>
     {% for item in audios %}
-        <li>{{ item }}</li>  
+        <li>
+          <div>Vocals</div>
+          <audio controls="" preload="metadata" src="http://127.0.0.1:8000/{{ item[0] }}" class="svelte-eemfgq"></audio>
+          <div>No Vocals</div>
+          <audio controls="" preload="metadata" src="http://127.0.0.1:8000/{{ item[1] }}" class="svelte-eemfgq"></audio>
+        </li>  
     {% endfor %}
+    </ul>
   
     <form action="/uploadvideo/" method="post" enctype="multipart/form-data">
       <label for="video-upload" class="upload-btn">选择一个视频文件（MP4）</label>
