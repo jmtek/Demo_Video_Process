@@ -11,7 +11,7 @@ client = Client("abidlabs/music-separation")
 
 def acapellify(audio_path):
     result = client.predict(audio_path, api_name="/predict")
-    return str(result)
+    return result
 
 def process_video(video_path):
     old_audio = os.path.basename(video_path).split(".")[0] + ".m4a"
