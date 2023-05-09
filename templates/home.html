@@ -63,23 +63,46 @@
     </style>
   </head>
   <body>
-    <h1>Video Gallery</h1>
-    
-      <p>No videos uploaded yet.</p>
-    
+    <h1>视频</h1>
+    <ul>
+    {% for item in videos %}
+        <li>{{ item }}</li>  
+    {% endfor %}
+
+    <h1>音频</h1>
+    <ul>
+    {% for item in audios %}
+        <li>{{ item }}</li>  
+    {% endfor %}
+  
     <form action="/uploadvideo/" method="post" enctype="multipart/form-data">
-      <label for="video-upload" class="upload-btn">Choose video file</label>
+      <label for="video-upload" class="upload-btn">选择一个视频文件（MP4）</label>
       <input type="file" name="video" id="video-upload">
-      <span class="file-name"></span>
+      <span class="video-name"></span>
+      <button type="submit" class="upload-btn">Upload</button>
+    </form>
+
+    <form action="/uploadaudio/" method="post" enctype="multipart/form-data">
+      <label for="audio-upload" class="upload-btn">选择一个音频文件</label>
+      <input type="file" name="audio" id="audio-upload">
+      <span class="audio-name"></span>
       <button type="submit" class="upload-btn">Upload</button>
     </form>
     <script>
       // Display selected file name in the form
-      const fileUpload = document.getElementById("video-upload");
-      const fileName = document.querySelector(".file-name");
+      const videoUpload = document.getElementById("video-upload");
+      const videoName = document.querySelector(".video-name");
 
-      fileUpload.addEventListener("change", (e) => {
-        fileName.textContent = e.target.files[0].name;
+      videoUpload.addEventListener("change", (e) => {
+        videoName.textContent = e.target.files[0].name;
+      });
+
+      // Display selected file name in the form
+      const audioUpload = document.getElementById("audio-upload");
+      const audioName = document.querySelector(".audio-name");
+
+      audioUpload.addEventListener("change", (e) => {
+        audioName.textContent = e.target.files[0].name;
       });
     </script>
   </body>
