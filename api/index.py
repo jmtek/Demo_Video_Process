@@ -1,5 +1,7 @@
 import datetime
-import requests
+import uuid
+import aiofiles
+import aiohttp
 
 from typing import Annotated
 from fastapi import FastAPI, Form
@@ -17,19 +19,23 @@ app=FastAPI()
 def format_time(num_str):
     return str(datetime.timedelta(seconds=int(num_str)))
 
-def download_file(url):
-    # 发送请求
-    response = requests.get(url)
-    # 获得临时文件名和路径
-    file_name = url.split('/')[-1]
-    file_path = ''.join([FILE_TEMP_DIR, file_name])
-
-    with open(file_path, 'wb') as f:    
-        for chunk in response.iter_content(chunk_size=1024): 
-            if chunk:
-                f.write(chunk)
-    
-    return file_path
+async def download_file(url):
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                # 文件名
+                file_name = url.split('/')[-1]  
+                file_name = FILE_TEMP_DIR + str(uuid.uuid1()) + '.' + file_name.split(".")[1]        
+                
+                async with aiofiles.open(file_name, 'wb') as f: 
+                    async for chunk in response.content.iter_chunked(1024):  
+                        if chunk:
+                            f.write(chunk)  
+                            
+        return file_name
+    except Exception as e:
+        # return {"status": "error", "error": str(e)}
+        return ""
 
 @app.post("/seperateaudiofromvideo/")
 def seperate_audio_from_video(video_url: Annotated[str, Form()]):
@@ -46,8 +52,8 @@ def remove_vocal_from_video(video_url: Annotated[str, Form()]):
     return { "url": URL_BASE + new_video_path }
 
 @app.post("/transcriptfromvideo/")
-def transcript_from_video(video_url: Annotated[str, Form()]):
-    video_path = download_file(video_url)
+async def transcript_from_video(video_url: Annotated[str, Form()]):
+    video_path = await download_file(video_url)
     audio = seperate_audio(video_path)
     result = transcript(audio)
 
@@ -58,8 +64,8 @@ def transcript_from_video(video_url: Annotated[str, Form()]):
     }
 
 @app.post("/transcriptfromaudio/")
-def transcript_from_video(audio_url: Annotated[str, Form()]):
-    audio = download_file(audio_url)
+async def transcript_from_video(audio_url: Annotated[str, Form()]):
+    audio = await download_file(audio_url)
     result = transcript(audio)
 
     return {
