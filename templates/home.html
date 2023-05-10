@@ -95,6 +95,22 @@
       <span class="audio-name"></span>
       <button type="submit" class="upload-btn">Upload</button>
     </form>
+
+    <form action="/seperateaudiofromvideo/" method="post" target="_blank">
+      <label for="audio-upload" class="upload-btn">输入要分离音频的视频文件URL</label>
+      <input type="input" name="video_url">
+      <button type="submit" class="upload-btn">submit</button>
+    </form>
+    <form action="/transcriptfromvideo/" method="post" target="_blank">
+      <label for="audio-upload" class="upload-btn">输入要提取字幕的视频文件URL</label>
+      <input type="input" name="video_url">
+      <button type="submit" class="upload-btn">submit</button>
+    </form>
+    <form action="/transcriptfromaudio/" method="post" target="_blank">
+      <label for="audio-upload" class="upload-btn">输入要提取字幕的音频文件URL</label>
+      <input type="input" name="audio_url">
+      <button type="submit" class="upload-btn">submit</button>
+    </form>
     <script>
       // Display selected file name in the form
       const videoUpload = document.getElementById("video-upload");
