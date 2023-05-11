@@ -1,6 +1,8 @@
 import os
 import subprocess
+from src.utilities import timed_func
 
+@timed_func
 def seperate_audio(video_path: str):
     video_dir = os.path.dirname(video_path)
     video_filename = os.path.basename(video_path)
@@ -9,6 +11,7 @@ def seperate_audio(video_path: str):
 
     return old_audio
 
+@timed_func
 def inject_audio(audio_path: str, video_path: str):
     video_filename = os.path.basename(video_path)
     new_video = f'{os.path.dirname(video_path)}/{"_new.".join(video_filename.split("."))}'

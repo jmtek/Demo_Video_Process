@@ -6,6 +6,9 @@ def load_model():
 
 model = load_model()
 
+from src.utilities import timed_func
+
+@timed_func
 def transcript(voc_audio):
     audio = whisper.load_audio(voc_audio)
     # audio = whisper.pad_or_trim(audio)

@@ -1,6 +1,8 @@
 import os
 import subprocess
+from src.utilities import timed_func
 
+@timed_func
 def seperate_vocals(audio_path):
     # result = client.predict(audio_path, api_name="/predict")
     audio_dir = os.path.dirname(audio_path)
