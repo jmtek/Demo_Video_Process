@@ -93,7 +93,7 @@ async def transcript_audio(audio: UploadFile = File(...)):
     # 提取语音文字
     transcription = transcript(save_path)
 
-    transcriptions.append(transcription['text'])
+    transcriptions.append(transcription['text_plus_timeline'])
     return RedirectResponse(url='/', status_code=303)
 
 @app.post("/uploadvideo/")
