@@ -81,6 +81,15 @@
         </li>  
     {% endfor %}
     </ul>
+
+    <h1>字幕</h1>
+    <ul>
+    {% for item in transcriptions %}
+        <li>
+          <div>{{ item }}</div>
+        </li>  
+    {% endfor %}
+    </ul>
   
     <form action="/uploadvideo/" method="post" enctype="multipart/form-data">
       <label for="video-upload" class="upload-btn">选择一个视频文件（MP4）</label>
@@ -93,6 +102,13 @@
       <label for="audio-upload" class="upload-btn">选择一个音频文件</label>
       <input type="file" name="audio" id="audio-upload">
       <span class="audio-name"></span>
+      <button type="submit" class="upload-btn">Upload</button>
+    </form>
+
+    <form action="/transcriptaudio/" method="post" enctype="multipart/form-data">
+      <label for="audio-upload2" class="upload-btn">选择一个音频文件</label>
+      <input type="file" name="audio" id="audio-upload2">
+      <span class="audio-name2"></span>
       <button type="submit" class="upload-btn">Upload</button>
     </form>
 
@@ -126,6 +142,14 @@
 
       audioUpload.addEventListener("change", (e) => {
         audioName.textContent = e.target.files[0].name;
+      });
+
+      // Display selected file name in the form
+      const audioUpload2 = document.getElementById("audio-upload2");
+      const audioName2 = document.querySelector(".audio-name2");
+
+      audioUpload2.addEventListener("change", (e) => {
+        audioName2.textContent = e.target.files[0].name;
       });
     </script>
   </body>

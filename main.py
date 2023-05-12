@@ -8,6 +8,7 @@ from fastapi.templating import Jinja2Templates
 
 from src.video_func import seperate_audio, inject_audio
 from src.audio_func import seperate_vocals
+from src.transcript import transcript
 from api.index import app
 
 # from gradio_client import Client
@@ -65,6 +66,7 @@ templates = Jinja2Templates(directory="templates")
 
 videos = []
 audios = []
+transcriptions = []
 
 def save_upload_file(upload: UploadFile = File(...)):
     # 生成文件名
@@ -82,7 +84,17 @@ def save_upload_file(upload: UploadFile = File(...)):
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     return templates.TemplateResponse(
-        "home.html", {"request": request, "videos": videos, "audios": audios})
+        "home.html", {"request": request, "videos": videos, "audios": audios, "transcriptions": transcriptions})
+
+@app.post("/transcriptaudio/")
+async def transcript_audio(audio: UploadFile = File(...)):
+    # 保存到本地
+    save_path = save_upload_file(audio)
+    # 提取语音文字
+    transcription = transcript(save_path)
+
+    transcriptions.append(transcription)
+    return RedirectResponse(url='/', status_code=303)
 
 @app.post("/uploadvideo/")
 async def upload_video(video: UploadFile = File(...)):
