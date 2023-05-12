@@ -1,11 +1,10 @@
-import os,datetime
+import os
 import uuid
 import aiofiles
 import aiohttp
 
 from typing import Annotated
 from fastapi import FastAPI, Form
-from zhconv import convert
 
 from src.video_func import seperate_audio, inject_audio
 from src.audio_func import seperate_vocals
@@ -16,9 +15,6 @@ URL_BASE = "http://0.0.0.0/"
 FILE_TEMP_DIR = "./static/temp/"
 
 app=FastAPI()
-
-def format_time(num_str):
-    return str(datetime.timedelta(seconds=int(num_str)))
 
 @timed_func
 async def download_file(url):
@@ -118,12 +114,7 @@ async def transcript_from_video(video_url: Annotated[str, Form()]):
     finally:
         os.remove(video_path)
 
-    return good_request_response({
-        "text": result["text"],
-        # "text_plus_timeline": '\n'.join([ f"[{format_time(segment['start'])} --> {format_time(segment['end'])}]  {convert(segment['text'], 'zh-cn')}" for segment in result["segments"]])
-        "text_plus_timeline": '\n'.join([ f"[{format_time(segment['start'])} --> {format_time(segment['end'])}]  {segment['text']}" for segment in result["segments"]])
-        # "raw_transcript": transcript
-    })
+    return good_request_response(result)
 
 @app.post("/transcriptfromaudio/")
 async def transcript_from_video(audio_url: Annotated[str, Form()]):
@@ -137,8 +128,4 @@ async def transcript_from_video(audio_url: Annotated[str, Form()]):
     finally:
         os.remove(audio)
 
-    return good_request_response({
-        "text": result["text"],
-        "text_plus_timeline": '\n'.join([ f"[{format_time(segment['start'])} --> {format_time(segment['end'])}]  {segment['text']}" for segment in result["segments"]])
-        # "raw_transcript": transcript
-    })
+    return good_request_response(result)
