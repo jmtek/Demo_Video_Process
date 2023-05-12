@@ -119,7 +119,7 @@ async def transcript_from_video(video_url: Annotated[str, Form()]):
         os.remove(video_path)
 
     return good_request_response({
-        "text": convert(result["text"],'zh-cn'),
+        "text": result["text"],
         # "text_plus_timeline": '\n'.join([ f"[{format_time(segment['start'])} --> {format_time(segment['end'])}]  {convert(segment['text'], 'zh-cn')}" for segment in result["segments"]])
         "text_plus_timeline": '\n'.join([ f"[{format_time(segment['start'])} --> {format_time(segment['end'])}]  {segment['text']}" for segment in result["segments"]])
         # "raw_transcript": transcript
@@ -138,7 +138,7 @@ async def transcript_from_video(audio_url: Annotated[str, Form()]):
         os.remove(audio)
 
     return good_request_response({
-        "text": convert(result["text"],'zh-cn'),
+        "text": result["text"],
         "text_plus_timeline": '\n'.join([ f"[{format_time(segment['start'])} --> {format_time(segment['end'])}]  {segment['text']}" for segment in result["segments"]])
         # "raw_transcript": transcript
     })
