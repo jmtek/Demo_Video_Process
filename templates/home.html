@@ -99,20 +99,20 @@
     </form>
 
     <form action="/uploadaudio/" method="post" enctype="multipart/form-data">
-      <label for="audio-upload" class="upload-btn">选择一个音频文件</label>
+      <label for="audio-upload" class="upload-btn">选择一个音频文件分离语音以及背景音</label>
       <input type="file" name="audio" id="audio-upload">
       <span class="audio-name"></span>
       <button type="submit" class="upload-btn">Upload</button>
     </form>
 
     <form action="/transcriptaudio/" method="post" enctype="multipart/form-data">
-      <label for="audio-upload2" class="upload-btn">选择一个音频文件</label>
+      <label for="audio-upload2" class="upload-btn">选择一个音频文件提取字幕文本</label>
       <input type="file" name="audio" id="audio-upload2">
       <span class="audio-name2"></span>
       <button type="submit" class="upload-btn">Upload</button>
     </form>
 
-    <form action="/seperateaudiofromvideo/" method="post" target="_blank">
+    <!-- <form action="/seperateaudiofromvideo/" method="post" target="_blank">
       <label for="audio-upload" class="upload-btn">输入要分离音频的视频文件URL</label>
       <input type="input" name="video_url">
       <button type="submit" class="upload-btn">submit</button>
@@ -126,7 +126,7 @@
       <label for="audio-upload" class="upload-btn">输入要提取字幕的音频文件URL</label>
       <input type="input" name="audio_url">
       <button type="submit" class="upload-btn">submit</button>
-    </form>
+    </form> -->
     <script>
       // Display selected file name in the form
       const videoUpload = document.getElementById("video-upload");
