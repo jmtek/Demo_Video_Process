@@ -86,7 +86,9 @@
     <ul>
     {% for item in transcriptions %}
         <li>
-          <div>{{ item.replace("\n", "<br>") }}</div>
+          {% for text in item.split("\n") %}
+          <div>{{ text }}</div>
+          {% endfor %}
         </li>  
     {% endfor %}
     </ul>
