@@ -31,6 +31,7 @@ def transcript(voc_audio):
 
     return {
         "text": result["text"],
+        "text_with_splitter": '\n'.join([ f"{segment['text']}" for segment in result["segments"]]),
         # "text_plus_timeline": '\n'.join([ f"[{format_time(segment['start'])} --> {format_time(segment['end'])}]  {convert(segment['text'], 'zh-cn')}" for segment in result["segments"]])
         "text_plus_timeline": '\n'.join([ f"[{format_time(segment['start'])} --> {format_time(segment['end'])}]  {segment['text']}" for segment in result["segments"]])
         # "raw_transcript": transcript

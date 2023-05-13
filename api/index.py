@@ -77,8 +77,8 @@ async def seperate_audio_from_video(video_url: Annotated[str, Form()]):
         audio_path = seperate_audio(video_path)
     except Exception as e:
         return bad_request_response("分离音频失败", e)
-    finally:
-        os.remove(video_path)
+    # finally:
+    #     os.remove(video_path)
     return good_request_response({ "url": URL_BASE + audio_path })
 
 @app.post("/removevocal/")
@@ -95,8 +95,8 @@ async def remove_vocal_from_video(video_url: Annotated[str, Form()]):
         os.remove(no_voc_audio)
     except Exception as e:
         return bad_request_response("视频处理失败", e)
-    finally:
-        os.remove(video_path)
+    # finally:
+    #     os.remove(video_path)
 
     return good_request_response({ "url": URL_BASE + new_video_path })
 
@@ -111,8 +111,8 @@ async def transcript_from_video(video_url: Annotated[str, Form()]):
         os.remove(audio)
     except Exception as e:
         return bad_request_response("视频转文字失败", e)
-    finally:
-        os.remove(video_path)
+    # finally:
+    #     os.remove(video_path)
 
     return good_request_response(result)
 
@@ -125,7 +125,7 @@ async def transcript_from_video(audio_url: Annotated[str, Form()]):
         result = transcript(audio)
     except Exception as e:
         return bad_request_response("音频转文字失败", e)
-    finally:
-        os.remove(audio)
+    # finally:
+    #     os.remove(audio)
 
     return good_request_response(result)
