@@ -2,6 +2,7 @@ import os
 import uuid
 import aiofiles
 import aiohttp
+import requests
 
 from typing import Annotated
 from fastapi import FastAPI, Form
@@ -15,6 +16,12 @@ URL_BASE = "http://0.0.0.0/"
 FILE_TEMP_DIR = "./static/temp/"
 
 app=FastAPI()
+
+
+def call_webhook(data):
+    webhook_url = "https://maker.ifttt.com/trigger/transcript/json/with/key/dsJWkJ5szEedFwmDcLd8ne"
+    payload = {"transcription":data} 
+    requests.post(webhook_url, json=payload)
 
 # @timed_func
 async def download_file(url):
@@ -108,6 +115,7 @@ async def transcript_from_video(video_url: Annotated[str, Form()]):
     try:
         audio = separate_audio(video_path)
         result = transcript_with_segments(audio)
+        call_webhook(result)
         os.remove(audio)
     except Exception as e:
         return bad_request_response("视频转文字失败", e)
@@ -123,6 +131,7 @@ async def transcript_from_video(audio_url: Annotated[str, Form()]):
         return bad_request_response("download audio from url failed")
     try:
         result = transcript_with_segments(audio)
+        call_webhook(result)
     except Exception as e:
         return bad_request_response("音频转文字失败", e)
     # finally:
