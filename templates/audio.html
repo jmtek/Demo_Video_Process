@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>音频分离</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f5f5f5;
+      }
+      h1 {
+        margin-top: 30px;
+        margin-bottom: 20px;
+      }
+      .gallery {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        padding: 20px;
+      }
+      .video {
+        border: 2px solid #ccc;
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+        border-radius: 5px;
+        overflow: hidden;
+        width: 300px;
+        margin-bottom: 20px;
+      }
+      .video video {
+        width: 100%;
+        height: 200px;
+      }
+      .video p {
+        margin: 10px 0;
+      }
+      form {
+        margin-top: 20px;
+      }
+      input[type="file"] {
+        display: none;
+      }
+      .upload-btn {
+        display: inline-block;
+        background-color: #3498db;
+        color: #fff;
+        padding: 10px 20px;
+        font-size: 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      .upload-btn:hover {
+        background-color: #2980b9;
+      }
+      .file-name {
+        margin-left: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    {% if audio %}
+    <div>Vocals</div>
+    <audio controls="" preload="metadata" src="/{{ audio[0] }}" class="svelte-eemfgq"></audio>
+    <div>No Vocals</div>
+    <audio controls="" preload="metadata" src="/{{ audio[1] }}" class="svelte-eemfgq"></audio>
+    {% endif %}
+
+    <form action="/separatevocals/upload" method="post" enctype="multipart/form-data">
+      <label for="audio-upload" class="upload-btn">选择一个音频文件分离语音以及背景音</label>
+      <input type="file" name="audio" id="audio-upload">
+      <span class="audio-name"></span>
+      <button type="submit" class="upload-btn">Upload</button>
+    </form>
+    <script>
+      // Display selected file name in the form
+      const audioUpload = document.getElementById("audio-upload");
+      const audioName = document.querySelector(".audio-name");
+
+      audioUpload.addEventListener("change", (e) => {
+        audioName.textContent = e.target.files[0].name;
+      });
+    </script>
+  </body>
+</html>

@@ -6,8 +6,8 @@ import aiohttp
 from typing import Annotated
 from fastapi import FastAPI, Form
 
-from src.video_func import seperate_audio, inject_audio
-from src.audio_func import seperate_vocals
+from src.video_func import separate_audio, inject_audio
+from src.audio_func import separate_vocals
 from src.transcript import transcript
 from src.utilities import timed_func
 
@@ -68,13 +68,13 @@ def good_request_response(result, **kwargs):
         "result": result
     }
 
-@app.post("/seperateaudiofromvideo/")
-async def seperate_audio_from_video(video_url: Annotated[str, Form()]):
+@app.post("/separateaudiofromvideo/")
+async def separate_audio_from_video(video_url: Annotated[str, Form()]):
     video_path = await download_file(video_url)
     if video_path == "":
         return bad_request_response("download video from url failed")
     try:
-        audio_path = seperate_audio(video_path)
+        audio_path = separate_audio(video_path)
     except Exception as e:
         return bad_request_response("分离音频失败", e)
     # finally:
@@ -87,8 +87,8 @@ async def remove_vocal_from_video(video_url: Annotated[str, Form()]):
     if video_path == "":
         return bad_request_response("download video from url failed")
     try:
-        old_audio = seperate_audio(video_path)
-        voc_audio, no_voc_audio = seperate_vocals(old_audio)
+        old_audio = separate_audio(video_path)
+        voc_audio, no_voc_audio = separate_vocals(old_audio)
         os.remove(old_audio)
         new_video_path = inject_audio(no_voc_audio, video_path)
         os.remove(voc_audio)
@@ -106,7 +106,7 @@ async def transcript_from_video(video_url: Annotated[str, Form()]):
     if video_path == "":
         return bad_request_response("download video from url failed")
     try:
-        audio = seperate_audio(video_path)
+        audio = separate_audio(video_path)
         result = transcript(audio)
         os.remove(audio)
     except Exception as e:

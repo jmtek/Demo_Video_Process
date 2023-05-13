@@ -3,7 +3,7 @@ import subprocess
 from src.utilities import timed_func
 
 @timed_func
-def seperate_audio(video_path: str):
+def separate_audio(video_path: str):
     video_dir = os.path.dirname(video_path)
     video_filename = os.path.basename(video_path)
     old_audio = video_dir + '/' + video_filename.split(".")[0] + ".m4a"

@@ -6,8 +6,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from src.video_func import seperate_audio, inject_audio
-from src.audio_func import seperate_vocals
+from src.video_func import separate_audio, inject_audio
+from src.audio_func import separate_vocals
 from src.transcript import transcript
 from api.index import app
 
@@ -84,38 +84,73 @@ def save_upload_file(upload: UploadFile = File(...)):
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     return templates.TemplateResponse(
-        "home.html", {"request": request, "videos": videos, "audios": audios, "transcriptions": transcriptions})
+        "home.html", {"request": request})
 
-@app.post("/transcriptaudio/")
-async def transcript_audio(audio: UploadFile = File(...)):
+@app.get("/read", response_class=HTMLResponse)
+async def checkall(request: Request):
+    return templates.TemplateResponse(
+        "read.html", {
+            "request": request, 
+            "videos": videos, 
+            "audios": audios,
+            "transcriptions": transcriptions
+            })
+
+# 人声转文字
+@app.get("/transcript/upload", response_class=HTMLResponse)
+async def home(request: Request):
+    transcription = None if len(transcriptions) == 0 else transcriptions[len(transcriptions)-1:][0]
+    return templates.TemplateResponse(
+        "transcript.html", {"request": request, "transcription": transcription})
+
+@app.post("/transcript/upload")
+async def transcript_audio(file: UploadFile = File(...)):
     # 保存到本地
-    save_path = save_upload_file(audio)
+    save_path = save_upload_file(file)
+    # 如果上传的是视频则分离音频
+    ext = save_path.split('.')[1]
+    if ext == "mp4":
+        save_path = separate_audio(save_path)
     # 提取语音文字
     transcription = transcript(save_path)
 
     transcriptions.append(transcription['text_plus_timeline'])
-    return RedirectResponse(url='/', status_code=303)
+    return RedirectResponse(url='/transcript/upload', status_code=303)
 
-@app.post("/uploadvideo/")
+# 将视频的人声去除
+@app.get("/removevocal/upload", response_class=HTMLResponse)
+async def home(request: Request):
+    video = None if len(videos) == 0 else videos[len(videos)-1:][0]
+    return templates.TemplateResponse(
+        "video.html", {"request": request, "video": video})
+
+@app.post("/removevocal/upload")
 async def upload_video(video: UploadFile = File(...)):
     # 保存到本地
     save_path = save_upload_file(video)
     # 分离音频
-    old_audio = seperate_audio(save_path)
+    old_audio = separate_audio(save_path)
     # 分离语音和背景音
-    voc_audio, no_voc_audio = seperate_vocals(old_audio)
+    voc_audio, no_voc_audio = separate_vocals(old_audio)
     # 重新生成新视频
     new_video = inject_audio(no_voc_audio, save_path)
 
     videos.append(new_video)
-    return RedirectResponse(url='/', status_code=303)
+    return RedirectResponse(url='/removevocal/upload', status_code=303)
 
-@app.post("/uploadaudio/")
+# 音频分离，提取人声部分和背景音
+@app.get("/separatevocals/upload", response_class=HTMLResponse)
+async def home(request: Request):
+    audio = None if len(audios) == 0 else audios[len(audios)-1:][0]
+    return templates.TemplateResponse(
+        "audio.html", {"request": request, "audio": audio})
+
+@app.post("/separatevocals/upload")
 async def upload_audio(audio: UploadFile = File(...)):
     # 保存到本地
     save_path = save_upload_file(audio)
     # 分离语音和背景音
-    new_audio = seperate_vocals(save_path)
+    new_audio = separate_vocals(save_path)
 
     audios.append(new_audio)
-    return RedirectResponse(url='/', status_code=303)
+    return RedirectResponse(url='/separatevocals/upload', status_code=303)
