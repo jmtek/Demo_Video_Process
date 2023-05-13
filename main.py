@@ -160,7 +160,7 @@ async def upload_audio(audio: UploadFile = File(...)):
     return RedirectResponse(url='/separatevocals/upload', status_code=303)
 
 
-config = Config(app, host='0.0.0.0', port=8000)  
+config = Config(app, host='127.0.0.1', port=8000)  
 server = Server(config)  
 
 try:   
