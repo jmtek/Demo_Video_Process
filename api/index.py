@@ -16,7 +16,7 @@ FILE_TEMP_DIR = "./static/temp/"
 
 app=FastAPI()
 
-@timed_func
+# @timed_func
 async def download_file(url):
     # 文件名
     file_name = url.split('/')[-1]  
@@ -45,7 +45,7 @@ async def download_file(url):
                         await f.write(chunk)             
                         # 更新已下载大小
                         downloaded += len(chunk)
-                        print(f'{downloaded}/{file_size}') 
+                        # print(f'{downloaded}/{file_size}') 
                         
     except Exception as e:
         print(e)
@@ -55,7 +55,7 @@ async def download_file(url):
 
     return file_name
     
-def bad_request_response(message: str, exception: Exception):
+def bad_request_response(message: str, exception: Exception = None):
     return {
         "code": 500,
         "message": message,
