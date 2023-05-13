@@ -114,7 +114,7 @@ async def transcript_audio(file: UploadFile = File(...)):
     # 提取语音文字
     transcription = transcript(save_path)
 
-    transcriptions.append(transcription['text_plus_timeline'])
+    transcriptions.append(transcription)
     return RedirectResponse(url='/transcript/upload', status_code=303)
 
 # 将视频的人声去除

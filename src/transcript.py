@@ -19,6 +19,24 @@ def transcript(voc_audio):
     audio = whisper.load_audio(voc_audio)
     # audio = whisper.pad_or_trim(audio)
 
+    # make log-Mel spectrogram and move to the same device as the model
+    mel = whisper.log_mel_spectrogram(audio).to(model.device)
+
+    # detect the spoken language
+    _, probs = model.detect_language(mel)
+    print(f"Detected language: {max(probs, key=probs.get)}")
+
+    # decode the audio
+    options = whisper.DecodingOptions(fp16=False, language="zh")
+    result = whisper.decode(model, mel, options)
+
+    return result.text
+
+@timed_func
+def transcript_with_segments(voc_audio):
+    audio = whisper.load_audio(voc_audio)
+    # audio = whisper.pad_or_trim(audio)
+
     # mel = whisper.log_mel_spectrogram(audio).to(model.device)
 
     # _, probs = model.detect_language(mel)
@@ -27,7 +45,7 @@ def transcript(voc_audio):
     # result = whisper.decode(model, mel, options)
 
     # fp16 should be False if use CPU as it is not supported on CPU
-    result = model.transcribe(audio, verbose=True, fp16 = False)
+    result = model.transcribe(audio, verbose=True, fp16 = False, language = "zh")
 
     return {
         "text": result["text"],

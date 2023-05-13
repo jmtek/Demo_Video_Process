@@ -8,7 +8,7 @@ from fastapi import FastAPI, Form
 
 from src.video_func import separate_audio, inject_audio
 from src.audio_func import separate_vocals
-from src.transcript import transcript
+from src.transcript import transcript_with_segments
 from src.utilities import timed_func
 
 URL_BASE = "http://0.0.0.0/"
@@ -107,7 +107,7 @@ async def transcript_from_video(video_url: Annotated[str, Form()]):
         return bad_request_response("download video from url failed")
     try:
         audio = separate_audio(video_path)
-        result = transcript(audio)
+        result = transcript_with_segments(audio)
         os.remove(audio)
     except Exception as e:
         return bad_request_response("视频转文字失败", e)
@@ -122,7 +122,7 @@ async def transcript_from_video(audio_url: Annotated[str, Form()]):
     if audio == "":
         return bad_request_response("download audio from url failed")
     try:
-        result = transcript(audio)
+        result = transcript_with_segments(audio)
     except Exception as e:
         return bad_request_response("音频转文字失败", e)
     # finally:
