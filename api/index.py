@@ -7,6 +7,7 @@ import requests
 from typing import Annotated
 from fastapi import FastAPI, Form
 
+from src.log import logger
 from src.video_func import separate_audio, inject_audio
 from src.audio_func import separate_vocals
 from src.transcript import transcript_with_segments
@@ -55,7 +56,8 @@ async def download_file(url):
                         # print(f'{downloaded}/{file_size}') 
                         
     except Exception as e:
-        print(e)
+        logger.error("下载文件失败")
+        logger.error(e)
         # 如果下载失败,删除空文件
         os.remove(file_name)
         file_name = ""
@@ -63,6 +65,7 @@ async def download_file(url):
     return file_name
     
 def bad_request_response(message: str, exception: Exception = None):
+    logger.error(f'{message}: {exception}')
     return {
         "code": 500,
         "message": message,
@@ -121,6 +124,7 @@ async def transcript_from_video(video_url: Annotated[str, Form()]):
         return bad_request_response("视频转文字失败", e)
     # finally:
     #     os.remove(video_path)
+    logger.debug(str(result))
 
     return good_request_response(result)
 

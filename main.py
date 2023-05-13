@@ -6,6 +6,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from uvicorn import Config, Server
+
+from src.log import logger
 from src.video_func import separate_audio, inject_audio
 from src.audio_func import separate_vocals
 from src.transcript import transcript
@@ -113,6 +116,7 @@ async def transcript_audio(file: UploadFile = File(...)):
         save_path = separate_audio(save_path)
     # 提取语音文字
     transcription = transcript(save_path)
+    logger.debug(transcription)
 
     transcriptions.append(transcription)
     return RedirectResponse(url='/transcript/upload', status_code=303)
@@ -154,3 +158,12 @@ async def upload_audio(audio: UploadFile = File(...)):
 
     audios.append(new_audio)
     return RedirectResponse(url='/separatevocals/upload', status_code=303)
+
+
+config = Config(app, host='0.0.0.0', port=8000)  
+server = Server(config)  
+
+try:   
+    server.run()  
+except Exception as exc:
+    logger.error(f'Error occurred: {exc}')
