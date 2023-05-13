@@ -11,6 +11,8 @@ def load_model():
 model = load_model()
 
 ISDEBUG = os.environ.get("WHISPER_DEBUG") and bool(os.environ["WHISPER_DEBUG"])
+SAMPLE_RATE = 16000
+CHUNK_LENGTH = 30
 
 def format_time(num_str):
     return time.strftime('%H:%M:%S', time.gmtime(int(num_str)))
@@ -18,9 +20,9 @@ def format_time(num_str):
 from src.utilities import timed_func
 
 @timed_func
-def transcript(voc_audio: str, length: int = 30):
+def transcript(voc_audio: str, length: int = CHUNK_LENGTH):
     audio = whisper.load_audio(voc_audio)
-    audio = whisper.pad_or_trim(audio, length)
+    audio = whisper.pad_or_trim(audio, length * SAMPLE_RATE)
 
     # make log-Mel spectrogram and move to the same device as the model
     mel = whisper.log_mel_spectrogram(audio).to(model.device)
