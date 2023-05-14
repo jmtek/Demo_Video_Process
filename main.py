@@ -33,7 +33,7 @@ from api.index import app
 #     # result = client.predict(audio_path, api_name="/predict")
 #       return result
 
-SERVER_ROOT = os.environ["SERVER_ROOT"] if os.environ.get("SERVER_HOST") else "127.0.0.1:8000"
+SERVER_ROOT = os.environ["SERVER_ROOT"] if os.environ.get("SERVER_ROOT") else "127.0.0.1:8000"
 
 os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
