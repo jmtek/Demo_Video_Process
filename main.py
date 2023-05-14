@@ -101,7 +101,8 @@ async def transcript_audio(websocket: WebSocket):
             logger.debug(f"文字提取成功：\n{transcription}")
 
             await websocket.send_text(transcription["text_plus_timeline"])
-    except WebSocketDisconnect:
+    except WebSocketDisconnect as wse:
+        logger.error(f"websocket error: {wse}")
         manager.disconnect(websocket)
 
 # 将视频的人声去除
