@@ -82,16 +82,27 @@
       }
 
       var ws = null;
+      var duang = false;
       function prepare_transcript() {
+        duang = false
         this.disabled = true
         if (audioName.textContent == ""){
           warning("先选择一个要提取文字的音频文件")
           return;
         }
 
-        ws = new WebSocket("ws://{{server_root}}/transcript/upload");
+        connect = () => {
+          ws = new WebSocket("ws://{{server_root}}/transcript/upload")
+        }
+
+        connect()
         ws.onopen = function(){
           console.log('connected to server')
+          
+          // not duang means reconnect from a disconnection
+          if (duang == false)
+            return
+
           // 定期发送pong消息以响应服务端的ping
           // let pingInterval = setInterval(() => ws.send('pong'), 5000)  
           // 发送文件名
@@ -113,13 +124,18 @@
           console.log('received message from server: ', msg.data)
           show_transcription(msg.data)
           stopTimer()
-
-          ws.send('duang'); //tell server it's done
+          ws.send('duang') //tell server it's done
+          duang = true
         }
 
         ws.onclose = () => {
           console.log('disconnected from server')
-          uplodButton.disabled = false
+          if (duang) {
+            uplodButton.disabled = false
+          } else {
+            //reconnect
+            connect()
+          }
         }
 
         ws.onerror = (err) => {
