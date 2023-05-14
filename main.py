@@ -33,7 +33,8 @@ from api.index import app
 #     # result = client.predict(audio_path, api_name="/predict")
 #       return result
 
-SERVER_ROOT = "localhost:8000"
+SERVER_HOST = os.environ["SERVER_HOST"] if os.environ.get("SERVER_HOST") else "127.0.0.1"
+SERVER_PORT = 8000
 
 os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -75,7 +76,7 @@ async def checkall(request: Request):
 async def home(request: Request):
     transcription = None if len(transcriptions) == 0 else transcriptions[len(transcriptions)-1:][0]
     return templates.TemplateResponse(
-        "transcript.html", {"request": request, "server_root": SERVER_ROOT})
+        "transcript.html", {"request": request, "server_root": ":".join([SERVER_HOST, SERVER_PORT])})
 
 @app.websocket("/transcript/upload")
 async def transcript_audio(websocket: WebSocket): 
