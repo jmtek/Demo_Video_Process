@@ -82,8 +82,14 @@ async def transcript_audio(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
-            filename = await websocket.receive_text()
-            filename = str(uuid.uuid1()) + '.' + filename.split(".")[1]
+            data = await websocket.receive_text()
+
+            if data == "duang":
+                logger.debug("结束连接")
+                manager.disconnect(websocket)
+                return
+            
+            filename = str(uuid.uuid1()) + '.' + data.split(".")[-1:][0] # [-1:]防止文件名带'.'，取split之后数组的最后一个元素
             logger.debug(f"生成文件名：{filename}")
 
             data = await websocket.receive_bytes()

@@ -6,3 +6,4 @@ zhconv
 aiofiles
 aiohttp
 langchain
+websockets

@@ -32,18 +32,26 @@
       .file-name {
         margin-left: 10px;
       }
+      .loading {
+        display: none
+      }
     </style>
   </head>
   <body>
     <form method="post">
       <label for="audioupload" class="upload-btn">选择一个音频文件提取字幕文本</label>
       <input type="file" name="file" id="audioupload">
-      <span class="file-name" id="audioname"></span>
       <button type="button" class="upload-btn" id="uploadbutton" onclick="prepare_transcript()">上传</button>
     </form>
 
+    <div class="file-name" id="audioname"></div>
+
     <ul id='messages'>
     </ul>
+
+    <div id="loading" class="loading">正在提取结果，由于服务器算力有限，可能需要较长时间，请耐心等待...</div>
+
+    <ul id="transcriptresult"></ul>
 
     <script>
       // Display selected file name in the form
@@ -55,7 +63,7 @@
         audioName.textContent = e.target.files[0].name;
       });
 
-      var show_message = function(msg) {
+      var warning = (msg) => {
         var messages = document.getElementById('messages')
         var message = document.createElement('li')
         var content = document.createTextNode(msg)
@@ -63,41 +71,80 @@
         messages.appendChild(message)
       };
 
-      var ws_message = function(event) {
-        show_message("处理完成")
-        result = event.data
-        show_message(result)
-        uplodButton.disabled = false
-      };
+      var show_transcription = (transcription) => {
+        var container = document.getElementById('transcriptresult')
+        transcription.split('\n').forEach(segment => {
+          var lit = document.createElement('li')
+          var content = document.createTextNode(segment)
+          lit.appendChild(content)
+          container.appendChild(lit)
+        })
+      }
 
-      var wsupload = null;
+      var ws = null;
       function prepare_transcript() {
         this.disabled = true
         if (audioName.textContent == ""){
-          show_message("先选择一个要提取文字的音频文件")
+          warning("先选择一个要提取文字的音频文件")
           return;
         }
 
-        wsupload = new WebSocket("ws://{{server_root}}/transcript/upload");
-        wsupload.onclose = function(){
-          show_message("连接断开")
-        }
-        wsupload.onmessage = ws_message
-        wsupload.onopen = function(){
-          show_message("建立连接")
+        ws = new WebSocket("ws://{{server_root}}/transcript/upload");
+        ws.onopen = function(){
+          console.log('connected to server')
+          // 定期发送pong消息以响应服务端的ping
+          // let pingInterval = setInterval(() => ws.send('pong'), 5000)  
           // 发送文件名
-          wsupload.send(audioName.textContent)
+          ws.send(audioName.textContent)
 
           // 读取文件内容
           const reader = new FileReader()
           reader.onload = (e) => {
               // 文件内容读取完成,发送到服务端
-              wsupload.send(e.target.result) 
-              show_message("正在处理，由于服务器算力有限，可能需要较长时间，请稍后...")
+              ws.send(e.target.result) 
+              // start timer
+              startTimer()
           }
 
           reader.readAsArrayBuffer(audioUpload.files[0])
         }
+
+        ws.onmessage = (msg) => {
+          console.log('received message from server: ', msg.data)
+          show_transcription(msg.data)
+          stopTimer()
+
+          ws.send('duang'); //tell server it's done
+        }
+
+        ws.onclose = () => {
+          console.log('disconnected from server')
+          uplodButton.disabled = false
+        }
+
+        ws.onerror = (err) => {
+          console.log('websocket error: ', err)
+        } 
+      }
+
+      let timer, loading;
+
+      function startTimer() {
+        loading = document.getElementById('loading');
+        loading.style.display = 'block'
+        // timer = setTimeout(() => {
+        //   loading = document.getElementById('loading');
+        //   if (loading.style.display != 'block')
+        //     loading.style.display = 'block';
+        //   else
+        //     loading.style.display = "none"
+        // }, 2000);  // 2秒后显示loading
+      }
+
+      function stopTimer() {
+        // clearTimeout(timer);
+        loading = document.getElementById('loading');
+        loading.style.display = 'none';  // 隐藏loading
       }
     </script>
   </body>
