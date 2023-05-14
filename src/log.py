@@ -5,7 +5,7 @@ logger = logging.getLogger('mylogger')
 logger.setLevel(logging.DEBUG)
 
 # 创建文件处理器
-fh = logging.FileHandler('logfile.txt')
+fh = logging.FileHandler('static/logfile.txt')
 fh.setLevel(logging.DEBUG)
 
 # 创建格式器
