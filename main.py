@@ -96,13 +96,15 @@ async def transcript_audio(websocket: WebSocket):
 
             logger.debug(f"收到文件流，文件大小为：{len(data)}")
 
-            with open(filename, 'wb') as f:
+            # 拼接保存路径 
+            save_path = os.path.join('static/upload', filename) 
+            with open(save_path, 'wb') as f:
                 f.write(data) 
             
             logger.debug("保存文件成功")
 
             # 提取语音文字
-            transcription = transcript_with_segments(filename)
+            transcription = transcript_with_segments(save_path)
 
             logger.debug(f"文字提取成功：\n{transcription}")
 

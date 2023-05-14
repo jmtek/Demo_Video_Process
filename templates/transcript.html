@@ -82,9 +82,8 @@
       }
 
       var ws = null;
-      var duang = false;
+      var duang = true;
       function prepare_transcript() {
-        duang = false
         this.disabled = true
         if (audioName.textContent == ""){
           warning("先选择一个要提取文字的音频文件")
