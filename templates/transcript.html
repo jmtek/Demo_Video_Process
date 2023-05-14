@@ -79,8 +79,12 @@
         }
 
         wsupload = new WebSocket("ws://{{server_root}}/transcript/upload");
+        wsupload.onclose = function(){
+          show_message("连接断开")
+        }
         wsupload.onmessage = ws_message
         wsupload.onopen = function(){
+          show_message("建立连接")
           // 发送文件名
           wsupload.send(audioName.textContent)
 
