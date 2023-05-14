@@ -90,57 +90,62 @@
           return;
         }
 
-        connect = () => {
-          ws = new WebSocket("ws://{{server_root}}/transcript/upload")
-        }
-
         connect()
-        ws.onopen = function(){
-          console.log('connected to server')
-          
-          // not duang means reconnect from a disconnection
-          if (duang == false)
-            return
-
-          // 定期发送pong消息以响应服务端的ping
-          // let pingInterval = setInterval(() => ws.send('pong'), 5000)  
-          // 发送文件名
-          ws.send(audioName.textContent)
-
-          // 读取文件内容
-          const reader = new FileReader()
-          reader.onload = (e) => {
-              // 文件内容读取完成,发送到服务端
-              ws.send(e.target.result) 
-              // start timer
-              startTimer()
-          }
-
-          reader.readAsArrayBuffer(audioUpload.files[0])
-        }
-
-        ws.onmessage = (msg) => {
-          console.log('received message from server: ', msg.data)
-          show_transcription(msg.data)
-          stopTimer()
-          ws.send('duang') //tell server it's done
-          duang = true
-        }
-
-        ws.onclose = () => {
-          console.log('disconnected from server')
-          if (duang) {
-            uplodButton.disabled = false
-          } else {
-            //reconnect
-            connect()
-          }
-        }
-
-        ws.onerror = (err) => {
-          console.log('websocket error: ', err)
-        } 
       }
+
+      connect = () => {
+        ws = new WebSocket("ws://{{server_root}}/transcript/upload")
+        ws.onopen = wsonopen
+        ws.onclose = wsonclose
+        ws.onmessage = wsonmessage
+        ws.onerror = wsonerror
+      }
+
+      wsonopen = () => {
+        console.log('connected to server')
+        
+        // not duang means reconnect from a disconnection
+        if (duang == false)
+          return
+
+        // 定期发送pong消息以响应服务端的ping
+        // let pingInterval = setInterval(() => ws.send('pong'), 5000)  
+        // 发送文件名
+        ws.send(audioName.textContent)
+
+        // 读取文件内容
+        const reader = new FileReader()
+        reader.onload = (e) => {
+            // 文件内容读取完成,发送到服务端
+            ws.send(e.target.result) 
+            // start timer
+            startTimer()
+        }
+
+        reader.readAsArrayBuffer(audioUpload.files[0])
+      }
+
+      wsonmessage = (msg) => {
+        console.log('received message from server: ', msg.data)
+        show_transcription(msg.data)
+        stopTimer()
+        ws.send('duang') //tell server it's done
+        duang = true
+      }
+
+      wsonclose = () => {
+        console.log('disconnected from server')
+        if (duang) {
+          uplodButton.disabled = false
+        } else {
+          //reconnect
+          connect()
+        }
+      }
+
+      wsonerror = (err) => {
+        console.log('websocket error: ', err)
+      } 
 
       let timer, loading;
 
