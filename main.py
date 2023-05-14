@@ -1,17 +1,28 @@
 import os
 import uuid
 
-from fastapi import File, UploadFile, Request
+from fastapi import (
+    File, 
+    UploadFile, 
+    Request,
+    WebSocket,
+    WebSocketDisconnect
+)
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+# from fastapi.templating import Jinja2Templates
 
 from uvicorn import Config, Server
 
 from src.log import logger
 from src.video_func import separate_audio, inject_audio
 from src.audio_func import separate_vocals
-from src.transcript import transcript
+from src.transcript import transcript_with_segments
+
+from src.websocket.connection import manager
+
+from templates.Jinja2 import templates
+
 from api.index import app
 
 # from gradio_client import Client
@@ -20,52 +31,12 @@ from api.index import app
 
 # def acapellify(audio_path):
 #     # result = client.predict(audio_path, api_name="/predict")
-#     audio_dir = os.path.dirname(audio_path)
-#     audio_filename = os.path.basename(audio_path).split(".")
-#     if audio_filename[1] != "wav":
-#         old_audio_path = audio_path
-#         audio_path = audio_dir + '/' + audio_filename[0] + '.wav'
-#         subprocess.run(['ffmpeg',
-#                         '-i',
-#                         old_audio_path,
-#                         audio_path])
-        
-#     subprocess.run(['python3', 
-#                     '-m', 
-#                     'demucs.separate', 
-#                     '-n', 
-#                     'htdemucs', 
-#                     '--two-stems=vocals', 
-#                     '-d', 
-#                     'cpu', 
-#                     audio_path, 
-#                     '-o', 
-#                     'static'])
-    
-#     output_path = f'static/htdemucs/{audio_filename[0]}/'
+#       return result
 
-#     # os.system(f"python3 -m demucs.separate -n htdemucs --two-stems=vocals -d cpu {audio_path} -o out")
-#     return f"{output_path}vocals.wav",f"{output_path}no_vocals.wav"
-
-# def process_video(video_path):
-#     video_dir = os.path.dirname(video_path)
-#     video_filename = os.path.basename(video_path)
-#     old_audio = video_dir + '/' + video_filename.split(".")[0] + ".m4a"
-#     subprocess.run(['ffmpeg', '-y', '-i', video_path, '-vn', '-acodec', 'copy', old_audio])
-
-#     new_audio = acapellify(old_audio)
-#     new_audio_path = os.path.abspath(new_audio[0])
-
-#     new_video = f'{os.path.dirname(video_path)}/{"_new.".join(video_filename.split("."))}'
-
-#     subprocess.call(['ffmpeg', '-y', '-i', video_path, '-i', new_audio_path, '-map', '0:v', '-map', '1:a', 
-#                      '-c:v', 'copy', '-c:a', 'aac', '-strict', 'experimental', f"{new_video}"])
-#     return new_video
-
+SERVER_ROOT = "localhost:8000"
 
 os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
 
 videos = []
 audios = []
@@ -104,22 +75,34 @@ async def checkall(request: Request):
 async def home(request: Request):
     transcription = None if len(transcriptions) == 0 else transcriptions[len(transcriptions)-1:][0]
     return templates.TemplateResponse(
-        "transcript.html", {"request": request, "transcription": transcription})
+        "transcript.html", {"request": request, "server_root": SERVER_ROOT})
 
-@app.post("/transcript/upload")
-async def transcript_audio(file: UploadFile = File(...)):
-    # 保存到本地
-    save_path = save_upload_file(file)
-    # 如果上传的是视频则分离音频
-    ext = save_path.split('.')[1]
-    if ext == "mp4":
-        save_path = separate_audio(save_path)
-    # 提取语音文字
-    transcription = transcript(save_path)
-    logger.debug(transcription)
+@app.websocket("/transcript/upload")
+async def transcript_audio(websocket: WebSocket): 
+    await manager.connect(websocket)
+    try:
+        while True:
+            filename = await websocket.receive_text()
+            filename = str(uuid.uuid1()) + '.' + filename.split(".")[1]
+            logger.debug(f"生成文件名：{filename}")
 
-    transcriptions.append(transcription)
-    return RedirectResponse(url='/transcript/upload', status_code=303)
+            data = await websocket.receive_bytes()
+
+            logger.debug(f"收到文件流，文件大小为：{len(data)}")
+
+            with open(filename, 'wb') as f:
+                f.write(data) 
+            
+            logger.debug("保存文件成功")
+
+            # 提取语音文字
+            transcription = transcript_with_segments(filename)
+
+            logger.debug(f"文字提取成功：\n{transcription}")
+
+            await websocket.send_text(transcription["text_plus_timeline"])
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
 
 # 将视频的人声去除
 @app.get("/removevocal/upload", response_class=HTMLResponse)

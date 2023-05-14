@@ -5,7 +5,7 @@ import aiohttp
 import requests
 
 from typing import Annotated
-from fastapi import FastAPI, Form
+from fastapi import FastAPI, Form, File, UploadFile
 
 from src.log import logger
 from src.video_func import separate_audio, inject_audio
@@ -69,7 +69,7 @@ def bad_request_response(message: str, exception: Exception = None):
     return {
         "code": 500,
         "message": message,
-        "exception": exception
+        "exception": f"{exception}"
     }
 
 def good_request_response(result, **kwargs):
@@ -135,6 +135,27 @@ async def transcript_from_video(audio_url: Annotated[str, Form()]):
         return bad_request_response("download audio from url failed")
     try:
         result = transcript_with_segments(audio)
+        call_webhook(result)
+    except Exception as e:
+        return bad_request_response("音频转文字失败", e)
+    # finally:
+    #     os.remove(audio)
+
+    return good_request_response(result)
+
+@app.post("/transcriptfromaudiostream/")
+async def transcript_from_video(audio: UploadFile = File(...)):
+    # 生成文件名
+    filename = str(uuid.uuid1()) + '.' + audio.filename.split(".")[1]
+    # 拼接保存路径 
+    save_path = os.path.join('static/temp', filename) 
+    # 保存文件 
+    with open(save_path, 'wb') as f:
+        # 从SpooledTemporaryFile读取内容并写入
+        for chunk in iter(lambda: audio.file.read(1024 * 1024), b''):  
+            f.write(chunk) 
+    try:
+        result = transcript_with_segments(save_path)
         call_webhook(result)
     except Exception as e:
         return bad_request_response("音频转文字失败", e)
