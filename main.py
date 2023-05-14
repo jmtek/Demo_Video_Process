@@ -76,7 +76,7 @@ async def checkall(request: Request):
 async def home(request: Request):
     transcription = None if len(transcriptions) == 0 else transcriptions[len(transcriptions)-1:][0]
     return templates.TemplateResponse(
-        "transcript.html", {"request": request, "server_root": ":".join([SERVER_HOST, SERVER_PORT])})
+        "transcript.html", {"request": request, "server_root": ":".join([SERVER_HOST, str(SERVER_PORT)])})
 
 @app.websocket("/transcript/upload")
 async def transcript_audio(websocket: WebSocket): 
