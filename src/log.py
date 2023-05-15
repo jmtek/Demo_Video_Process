@@ -9,7 +9,7 @@ fh = logging.FileHandler('static/logfile.txt')
 fh.setLevel(logging.DEBUG)
 
 # 创建格式器
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(thread)d - %(message)s')
 fh.setFormatter(formatter)
 
 # 添加处理器
