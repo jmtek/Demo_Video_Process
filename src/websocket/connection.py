@@ -53,7 +53,7 @@ class ConnectionManager:
 
     def disconnect(self, websocket: WebSocket):
         for connection in self.active_connections:
-            if connection["connection"] is websocket:
+            if connection["connection"] is websocket and connection["pending_msg"] == "":   # 有暂存消息未发送则保留该连接
                 self.active_connections.remove(connection)
                 break
 
