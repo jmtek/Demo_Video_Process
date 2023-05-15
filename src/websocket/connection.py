@@ -82,9 +82,9 @@ manager = ConnectionManager()
 
 async def get_token(
     websocket: WebSocket,
-    session: Annotated[str | None, Cookie()] = None,
+    # session: Annotated[str | None, Cookie()] = None,
     token: Annotated[str | None, Query()] = None,
 ):
-    if session is None and token is None:
+    if token is None:
         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
-    return f"{session}_{token}"
+    return f"{token}"
