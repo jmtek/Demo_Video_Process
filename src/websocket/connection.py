@@ -48,7 +48,7 @@ class ConnectionManager:
         
         if pending_msg != "":
             logger.debug(f"当前客户端{token}之前有未完成消息\n{pending_msg}")
-            await manager.send_message(pending_msg)
+            await manager.send_message(pending_msg, websocket)
             logger.debug(f"向客户端{token}重发消息成功")
 
     def disconnect(self, websocket: WebSocket):
