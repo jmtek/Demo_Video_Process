@@ -82,6 +82,7 @@
       }
 
       var ws = null;
+      var wsurl = "ws://{{server_root}}/transcript/upload?token=" + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)
       var duang = true;
       var pingInterval
       prepare_transcript = () => {
@@ -111,8 +112,7 @@
       }
 
       connect = () => {
-        token = Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)
-        ws = new WebSocket("ws://{{server_root}}/transcript/upload?token=" + token)
+        ws = new WebSocket(wsurl)
         ws.onopen = wsonopen
         ws.onclose = wsonclose
         ws.onmessage = wsonmessage
@@ -168,7 +168,7 @@
         if (!duang) {
           debug("连接断开，5秒后重连")
           setTimeout(() => {
-            debug("建立连接")
+            debug("开始建立新连接")
             connect()
           }, 5000);  // 5秒后重连
         } else {
