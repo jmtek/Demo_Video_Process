@@ -86,8 +86,9 @@ async def home(request: Request):
 async def transcript_audio(websocket: WebSocket, token: Annotated[str, Depends(get_token)]): 
     try:
         await manager.connect(websocket, token)
-    except Exception as e:
+    except WebSocketDisconnect as e:
         logger.error(f"与客户端建立连接发生异常: {e}")
+        manager.disconnect(websocket)
 
     callback_code = ""
     while True:
@@ -99,7 +100,7 @@ async def transcript_audio(websocket: WebSocket, token: Annotated[str, Depends(g
                 manager.disconnect(websocket)
                 return
             
-            if singal_text.startswith("gothca_"):
+            if singal_text.startswith("gothca"):
                 # if callback_code == "":
                 #   serverside new websocket process
                 # elif singal_text == f"gothca_{callback_code}":
@@ -127,15 +128,17 @@ async def transcript_audio(websocket: WebSocket, token: Annotated[str, Depends(g
 
                 logger.debug(f"【客户端{token}】文字提取成功：\n{transcription}")
 
-                callback_code = str(uuid.uuid4())
-                msg = f'{singal_text}的文字提取完成\n{transcription["text_plus_timeline"]}\n\ncb_{callback_code}'
+                # callback_code = str(uuid.uuid4())
+                msg = f'{singal_text}的文字提取完成\n{transcription["text_plus_timeline"]}'
 
                 await manager.send_message(msg, websocket)
         except WebSocketDisconnect as wsd:
             logger.debug(f"error: {token} disconnected")
+            manager.disconnect(websocket)
             break
         except Exception as e:
             logger.error(f"unexpect error: {e}")
+            manager.disconnect(websocket)
             break
 
 # 将视频的人声去除

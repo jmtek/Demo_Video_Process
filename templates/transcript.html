@@ -153,14 +153,11 @@
           debug("server gotcha")
           return
         }
-        data = msg.data.split('\n\n')
-        if (data.length == 2 && data[1].substring(0,3) == "cb_") {
-          show_transcription(data[0])
-          stopTimer()
-          ws.send("gothca_" + data[1].substring(3)) //tell server it's done
-          duang = true
-          clearInterval(pingInterval)
-        }
+        show_transcription(msg.data)
+        stopTimer()
+        ws.send("gothca") //tell server it's done
+        duang = true
+        clearInterval(pingInterval)
       }
 
       wsonclose = () => {
@@ -183,8 +180,8 @@
       let timer, loading;
 
       function startTimer() {
-        loading = document.getElementById('loading');
-        loading.style.display = 'block'
+        // loading = document.getElementById('loading');
+        // loading.style.display = 'block'
         // timer = setTimeout(() => {
         //   loading = document.getElementById('loading');
         //   if (loading.style.display != 'block')
@@ -196,8 +193,8 @@
 
       function stopTimer() {
         // clearTimeout(timer);
-        loading = document.getElementById('loading');
-        loading.style.display = 'none';  // 隐藏loading
+        // loading = document.getElementById('loading');
+        // loading.style.display = 'none';  // 隐藏loading
       }
     </script>
   </body>
