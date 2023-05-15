@@ -4,10 +4,33 @@
     <title>字幕提取</title>
     <style>
       body {
-        font-family: sans-serif;
-        margin: 0;
-        padding: 0;
         background-color: #f5f5f5;
+      }
+      
+      .container {
+        height: 100%;
+        text-align: center;
+      }
+      
+      .center {
+        margin: 0;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        -ms-transform: translate(-50%, -50%);
+        transform: translate(-50%, -50%);
+      }
+      
+      .btn {
+        padding: 1em 2em; 
+        background: #3498db;
+        border: none;
+        color: #fff;
+      }
+      
+      textarea {
+        width: 700px;
+        height: 300px;  
       }
       h1 {
         margin-top: 30px;
@@ -29,27 +52,26 @@
       .upload-btn:hover {
         background-color: #2980b9;
       }
-      .file-name {
-        margin-left: 10px;
-      }
       .loading {
         display: none
       }
     </style>
   </head>
   <body>
-    <form method="post">
-      <label for="audioupload" class="upload-btn">选择一个音频文件提取字幕文本</label>
-      <input type="file" name="file" id="audioupload">
-      <button type="button" class="upload-btn" id="uploadbutton" onclick="prepare_transcript()">上传</button>
-    </form>
-
-    <ul id='messages'>
-    </ul>
-
-    <div id="loading" class="loading">文件已上传，正在提取结果，可能需要较长时间，请耐心等待...</div>
-
-    <ul id="transcriptresult"></ul>
+    <div class="container">
+      <div class="center"> 
+        <h1>音频转文字（语音文字提取）</h1>
+        <label for="audioupload" class="upload-btn">选择一个音频文件（mp3、m4a、wav格式文件）</label>
+        <input type="file" name="file" id="audioupload">
+        <button type="button" class="upload-btn" id="uploadbutton" onclick="prepare_transcript()">上传</button>
+        <br>
+        <div id="loading" class="loading">文件已上传，正在提取结果，可能需要较长时间，请耐心等待...</div>
+        <br>
+        <textarea placeholder="请选择一个音频文件" id="transcriptresult"></textarea>  
+        <ul id='messages'>
+        </ul>
+      </div>
+    </div>
 
     <script>
       const debug = false
@@ -69,13 +91,14 @@
       };
 
       show_transcription = (transcription) => {
-        var container = document.getElementById('transcriptresult')
-        transcription.split('\n').forEach(segment => {
-          var lit = document.createElement('li')
-          var content = document.createTextNode(segment)
-          lit.appendChild(content)
-          container.appendChild(lit)
-        })
+        var textarea = document.getElementById('transcriptresult')
+        textarea.innerHTML = transcription
+        // transcription.split('\n').forEach(segment => {
+        //   var lit = document.createElement('li')
+        //   var content = document.createTextNode(segment)
+        //   lit.appendChild(content)
+        //   container.appendChild(lit)
+        // })
       }
 
       var ws = null;
@@ -87,6 +110,12 @@
         if (audioupload.files.length != 1){
           alert("先选择一个要提取文字的音频文件")
           return;
+        }
+
+        filetype = audioUpload.files[0].name.split('.')[1]
+        if (filetype != 'mp3' && filetype != 'm4a' && filetype != 'wav') {
+          alert("目前只支持mp3、m4a、wav文件")
+          return
         }
 
         if (!ws || ws.readyState != WebSocket.OPEN) {
@@ -101,7 +130,7 @@
             }
           }, 1000)  
         } else {
-          console.log("之前连接未关闭，直接使用旧连接" + cur_time())
+          log("之前连接未关闭，直接使用旧连接" + cur_time())
           upload()
         }
       }
@@ -172,7 +201,7 @@
       }
 
       wsonerror = (err) => {
-        console.log('websocket error: ', err)
+        log('websocket error: ', err)
       } 
 
       let timer, loading;
