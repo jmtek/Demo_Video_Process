@@ -1,12 +1,17 @@
 import os
 import uuid
 
+from typing import Annotated
+
 from fastapi import (
     File, 
     UploadFile, 
+    Cookie,
+    Depends,
     Request,
     WebSocket,
-    WebSocketDisconnect
+    WebSocketDisconnect,
+    WebSocketException
 )
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -19,7 +24,7 @@ from src.video_func import separate_audio, inject_audio
 from src.audio_func import separate_vocals
 from src.transcript import transcript_with_segments
 
-from src.websocket.connection import manager
+from src.websocket.connection import manager, get_token
 
 from templates.Jinja2 import templates
 
@@ -78,40 +83,60 @@ async def home(request: Request):
         "transcript.html", {"request": request, "server_root": SERVER_ROOT})
 
 @app.websocket("/transcript/upload")
-async def transcript_audio(websocket: WebSocket): 
-    await manager.connect(websocket)
+async def transcript_audio(websocket: WebSocket, token: Annotated[str, Depends(get_token)]): 
     try:
-        while True:
-            data = await websocket.receive_text()
+        await manager.connect(websocket, token)
+    except Exception as e:
+        logger.error(f"与客户端建立连接发生异常: {e}")
 
-            if data == "duang":
+    callback_code = ""
+    while True:
+        try:
+            singal_text = await websocket.receive_text()
+
+            if singal_text == "duang":
                 logger.debug("结束连接")
                 manager.disconnect(websocket)
                 return
             
-            filename = str(uuid.uuid1()) + '.' + data.split(".")[-1:][0] # [-1:]防止文件名带'.'，取split之后数组的最后一个元素
-            logger.debug(f"生成文件名：{filename}")
+            if singal_text.startswith("gothca_"):
+                # if callback_code == "":
+                #   serverside new websocket process
+                # elif singal_text == f"gothca_{callback_code}":
+                #   same websocket
+                manager.clear_suspend_msg(token)
+            else:    
+                filename = str(uuid.uuid1()) + '.' + singal_text.split(".")[-1:][0] # [-1:]防止文件名带'.'，取split之后数组的最后一个元素
+                logger.debug(f"【客户端{token}】生成文件名：{filename}")
 
-            data = await websocket.receive_bytes()
+                data = await websocket.receive_bytes()
 
-            logger.debug(f"收到文件流，文件大小为：{len(data)}")
+                logger.debug(f"【客户端{token}】收到文件流，文件大小为：{len(data)}")
 
-            # 拼接保存路径 
-            save_path = os.path.join('static/upload', filename) 
-            with open(save_path, 'wb') as f:
-                f.write(data) 
-            
-            logger.debug("保存文件成功")
+                # 拼接保存路径 
+                save_path = os.path.join('static/upload', filename) 
+                with open(save_path, 'wb') as f:
+                    f.write(data) 
+                
+                logger.debug("【客户端{token}】保存文件成功")
 
-            # 提取语音文字
-            transcription = transcript_with_segments(save_path)
+                # await manager.send_message("开始提取文字", websocket)
 
-            logger.debug(f"文字提取成功：\n{transcription}")
+                # 提取语音文字
+                transcription = transcript_with_segments(save_path)
 
-            await websocket.send_text(transcription["text_plus_timeline"])
-    except WebSocketDisconnect as wse:
-        logger.error(f"websocket error: {wse.code}_{wse.reason}")
-        manager.disconnect(websocket)
+                logger.debug(f"【客户端{token}】文字提取成功：\n{transcription}")
+
+                callback_code = str(uuid.uuid4())
+                msg = f'{singal_text}的文字提取完成\n{transcription["text_plus_timeline"]}\n\ncb_{callback_code}'
+
+                await manager.send_message(msg, websocket)
+        except WebSocketDisconnect as wsd:
+            logger.debug(f"error: {token} disconnected")
+            break
+        except Exception as e:
+            logger.error(f"unexpect error: {e}")
+            break
 
 # 将视频的人声去除
 @app.get("/removevocal/upload", response_class=HTMLResponse)

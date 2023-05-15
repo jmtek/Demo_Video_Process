@@ -37,7 +37,7 @@
       }
     </style>
   </head>
-  <body>
+  <body onload="check_last_upload()">
     <form method="post">
       <label for="audioupload" class="upload-btn">选择一个音频文件提取字幕文本</label>
       <input type="file" name="file" id="audioupload">
@@ -63,7 +63,7 @@
         audioName.textContent = e.target.files[0].name;
       });
 
-      var warning = (msg) => {
+      var debug = (msg) => {
         var messages = document.getElementById('messages')
         var message = document.createElement('li')
         var content = document.createTextNode(msg)
@@ -83,33 +83,43 @@
 
       var ws = null;
       var duang = true;
-      function prepare_transcript() {
+      var pingInterval
+      prepare_transcript = () => {
         this.disabled = true
         if (audioName.textContent == ""){
-          warning("先选择一个要提取文字的音频文件")
+          alert("先选择一个要提取文字的音频文件")
           return;
         }
 
+        if (!ws || ws.readyState != WebSocket.OPEN) {
+          connect()
+          let stateInterval = setInterval(() => {
+            switch (ws.readyState) {
+              case WebSocket.OPEN: 
+                upload()
+                clearInterval(stateInterval)
+            }
+          }, 1000)  
+        } else {
+          console.log("之前连接未关闭，直接使用旧连接")
+          upload()
+        }
+      }
+
+      check_last_upload = () => {
         connect()
       }
 
       connect = () => {
-        ws = new WebSocket("ws://{{server_root}}/transcript/upload")
+        token = "test"//Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)
+        ws = new WebSocket("ws://{{server_root}}/transcript/upload?token=" + token)
         ws.onopen = wsonopen
         ws.onclose = wsonclose
         ws.onmessage = wsonmessage
         ws.onerror = wsonerror
       }
 
-      wsonopen = () => {
-        console.log('connected to server')
-        
-        // not duang means reconnect from a disconnection
-        if (duang == false)
-          return
-
-        // 定期发送pong消息以响应服务端的ping
-        // let pingInterval = setInterval(() => ws.send('pong'), 5000)  
+      upload = () => {
         // 发送文件名
         ws.send(audioName.textContent)
 
@@ -120,26 +130,49 @@
             ws.send(e.target.result) 
             // start timer
             startTimer()
+            duang = false
         }
 
         reader.readAsArrayBuffer(audioUpload.files[0])
       }
 
+      wsonopen = () => {
+        console.log('connected to server')
+        debug("已连接到服务器")
+
+        // 定期发送pong消息以响应服务端的ping
+        // let pingInterval = setInterval(() => {
+        //   ws.send('pong')
+        //   debug("client pong")
+        // }, 20000)  
+      }
+
       wsonmessage = (msg) => {
-        console.log('received message from server: ', msg.data)
-        show_transcription(msg.data)
-        stopTimer()
-        ws.send('duang') //tell server it's done
-        duang = true
+        console.log('received message from server')
+        if (msg.data == "gotcha"){
+          debug("server gotcha")
+          return
+        }
+        data = msg.data.split('\n\n')
+        if (data.length == 2 && data[1].substring(0,3) == "cb_") {
+          show_transcription(data[0])
+          stopTimer()
+          ws.send("gothca_" + data[1].substring(3)) //tell server it's done
+          duang = true
+          clearInterval(pingInterval)
+        }
       }
 
       wsonclose = () => {
         console.log('disconnected from server')
-        if (duang) {
-          uplodButton.disabled = false
+        if (!duang) {
+          debug("连接断开，5秒后重连")
+          setTimeout(() => {
+            debug("建立连接")
+            connect()
+          }, 5000);  // 5秒后重连
         } else {
-          //reconnect
-          connect()
+          debug("连接关闭")
         }
       }
 
