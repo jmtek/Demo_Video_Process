@@ -102,7 +102,7 @@
             }
           }, 1000)  
         } else {
-          console.log("之前连接未关闭，直接使用旧连接")
+          console.log("之前连接未关闭，直接使用旧连接" + cur_time())
           upload()
         }
       }
@@ -138,7 +138,7 @@
 
       wsonopen = () => {
         console.log('connected to server')
-        debug("已连接到服务器")
+        debug("已连接到服务器" + cur_time())
 
         // 定期发送pong消息以响应服务端的ping
         // let pingInterval = setInterval(() => {
@@ -150,7 +150,7 @@
       wsonmessage = (msg) => {
         console.log('received message from server')
         if (msg.data == "gotcha"){
-          debug("server gotcha")
+          debug("server gotcha" + cur_time())
           return
         }
         show_transcription(msg.data)
@@ -163,13 +163,13 @@
       wsonclose = () => {
         console.log('disconnected from server')
         if (!duang) {
-          debug("连接断开，5秒后重连")
+          debug("连接断开，5秒后重连" + cur_time())
           setTimeout(() => {
-            debug("开始建立新连接")
+            debug("开始建立新连接" + cur_time())
             connect()
           }, 5000);  // 5秒后重连
         } else {
-          debug("连接关闭")
+          debug("连接关闭" + cur_time())
         }
       }
 
@@ -178,6 +178,11 @@
       } 
 
       let timer, loading;
+
+      cur_time = () => {
+        d = new Date()
+        return d.getHours() + ':' + d.getMinutes() + ':' + d.getSeconds()
+      }
 
       function startTimer() {
         // loading = document.getElementById('loading');
