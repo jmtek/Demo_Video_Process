@@ -112,10 +112,7 @@
       }
 
       connect = () => {
-        ws = new WebSocket(wsurl, {
-          timeout: 10000,  // 10秒连接超时时间
-          closeTimeout: 5000  // 5秒关闭超时时间
-        })
+        ws = new WebSocket(wsurl)
         ws.onopen = wsonopen
         ws.onclose = wsonclose
         ws.onmessage = wsonmessage
