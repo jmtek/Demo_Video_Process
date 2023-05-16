@@ -1,22 +1,296 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Video Gallery</title>
+    <title>Transmuter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
       body {
-        font-family: sans-serif;
-        margin: 0;
-        padding: 0;
         background-color: #f5f5f5;
       }
-      h1 {
+      
+      .container {
+        height: 100%;
         text-align: center;
+      }
+      
+      .center {
+        margin: 0;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        -ms-transform: translate(-50%, -50%);
+        transform: translate(-50%, -50%);
+      }
+      
+      .btn {
+        padding: 1em 2em; 
+        background: #3498db;
+        border: none;
+        color: #fff;
+      }
+      
+      textarea {
+        width: 800px;
+        height: 400px;  
+      }
+
+      h1 {
         margin-top: 30px;
         margin-bottom: 20px;
+      }
+
+      input[type="file"] {
+        display: none;
+      }
+
+      .upload-btn {
+        display: inline-block;
+        background-color: #3498db;
+        color: #fff;
+        padding: 10px 20px;
+        font-size: 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      .upload-btn:hover {
+        background-color: #2980b9;
+      }
+
+      .loading {
+        display: none
+      }
+
+      .player {
+        display: none;
+        border: 1px solid #ddd;
+        padding: 5px; 
+      }
+
+      .audio-desc {
+        margin-bottom: 5px;
+      }
+
+      @media (max-width: 768px) { 
+        .center {
+            width: 90%;
+        }
+
+        textarea {
+          width: 90%;
+          height: 560px;  
+        }
       }
     </style>
   </head>
   <body>
-      <h1>HOMEPAGE</h1>
-  </body>
+    <div class="container">
+      <div class="center"> 
+        <h1>音频转文字 / 音频语音分离</h1>
+        <span>Step 1: </span>
+        <label for="audio_upload" class="upload-btn" tooltips="mp3、m4a、wav格式文件">选择一个音频文件</label>
+        <input type="file" name="file" id="audio_upload">
+        <br>
+        <br>
+        <span>Step 2: </span>
+        <button type="button" class="upload-btn ops-btn" id="uploadbutton1" onclick="prepare(1)">语音分离</button>
+        OR
+        <button type="button" class="upload-btn ops-btn" id="uploadbutton2" onclick="prepare(2)">语音文字提取</button>
+        <br>
+        <div id="loading" class="loading">服务器处理中，可能需要较长时间，请耐心等待...</div>
+        <br>
+        <div id="vocal" class="player">
+          <p class="audio-desc">只保留人声的音频
+            <button type="button" class="upload-btn ops-btn" id="uploadbutton3" onclick="prepare(3)">直接提取文字</button></p>
+          <audio controls="" preload="metadata" src="" class="svelte-eemfgq" id="vocal_audio"></audio>
+        </div>
+        <div id="no_vocal" class="player">
+          <p class="audio-desc">去除人声后的音频</p>
+          <audio controls="" preload="metadata" src="" class="svelte-eemfgq" id="no_vocal_audio"></audio>
+        </div>
+        <textarea placeholder="请选择一个音频文件，语音文字会在此显示" id="transcriptresult"></textarea>
+        <ul id='messages'>
+        </ul>
+      </div>
+    </div>
+
+    <script>
+      const debug = false
+      const audioupload = document.getElementById("audio_upload")
+      const vocalaudio = document.getElementById("vocal_audio")
+      const buttonuploads = document.querySelectorAll(".ops-btn")
+      const loading = document.getElementById('loading')
+
+      var ws = null
+      var wsurl = "ws://{{server_root}}/?token=" + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)
+      var startupmsg = ""
+      var sendfile = false
+      var talking = false
+
+      log = (msg) => {
+        console.log(msg)
+        if (debug) {
+          var messages = document.getElementById('messages')
+          var message = document.createElement('li')
+          var content = document.createTextNode(msg)
+          message.appendChild(content)
+          messages.appendChild(message)
+        }
+      };
+
+      callback = (msg) => {
+        recmsgprefix = msg.substring(0, 4)
+
+        if (recmsgprefix != "TRA_" && recmsgprefix != "SEP_"){
+          loading.innerText = msg
+          return
+        }
+
+        if (recmsgprefix == "TRA_") {
+          var textarea = document.getElementById('transcriptresult')
+          textarea.innerHTML = msg.substring(msg.indexOf('\n')+1)
+
+          switchButtonStatus(false)
+        } else if (recmsgprefix == "SEP_") {
+          result = msg.split("\n")
+          var audio_vocal = document.getElementById('vocal')
+          var audio_no_vocal = document.getElementById('no_vocal')
+
+          audio_vocal.childNodes[3].src = "http://{{server_root}}/" + result[1]
+          audio_vocal.style.display = 'block'
+          audio_no_vocal.childNodes[3].src = "http://{{server_root}}/" + result[2]
+          audio_no_vocal.style.display = 'block'
+        } 
+        
+        switchButtonStatus(false)
+        hideLoading()
+        ws.send("gothca") //tell server it's done
+      }
+
+      switchButtonStatus = (disabled) => {
+        talking = disabled
+        buttonuploads.forEach( btn => {
+            btn.disabled = disabled
+            btn.style.color = disabled ? "#ccc" : "#fff"
+          }
+        )
+      }
+
+      prepare = (op) => {
+
+        switchButtonStatus(true)
+
+        if (op == 1 || op == 2) {
+          if (audioupload.files.length != 1){
+            alert("先选择一个音频文件")
+            return;
+          }
+
+          filetype = audioupload.files[0].name.split('.')[1]
+          if (filetype != 'mp3' && filetype != 'm4a' && filetype != 'wav') {
+            alert("目前只支持mp3、m4a、wav文件")
+            return
+          }
+
+          startupmsg = (op == 1 ? "separatevocal:" : "transcript_upload:") + audioupload.files[0].name
+          sendfile = true
+        } else if (op == 3) {
+          vocalpath = vocalaudio.src.substring(7)
+          vocalpath = vocalpath.substring(vocalpath.indexOf('/') + 1)
+          startupmsg = "transcript_local:" + vocalpath
+          sendfile = false
+        }
+
+        if (!ws || ws.readyState != WebSocket.OPEN) {
+          connect()
+          let stateInterval = setInterval(() => {
+            switch (ws.readyState) {
+              case WebSocket.OPEN: 
+                send_data()
+                clearInterval(stateInterval)
+              // case WebSocket.CLOSED:
+              //   clearInterval(stateInterval)
+            }
+          }, 1000)  
+        } else {
+          log("之前连接未关闭，直接使用旧连接" + cur_time())
+          send_data()
+        }
+      }
+
+      connect = () => {
+        ws = new WebSocket(wsurl)
+        ws.onopen = wsonopen
+        ws.onclose = wsonclose
+        ws.onmessage = wsonmessage
+        ws.onerror = wsonerror
+
+        let stateTimeout = setTimeout(() => {
+            if (ws.readyState != WebSocket.OPEN) {
+              ws.close()
+            }
+          }, 10000)  
+      }
+
+      send_data = () => {
+        showLoading()
+        // 发送文件名
+        ws.send(startupmsg)
+
+        if (!sendfile)
+          return
+
+        // 读取文件内容
+        const reader = new FileReader()
+        reader.onload = (e) => {
+            // 文件内容读取完成,发送到服务端
+            ws.send(e.target.result) 
+        }
+
+        reader.readAsArrayBuffer(audioupload.files[0])
+      }
+
+      wsonopen = () => {
+        log("已连接到服务器" + cur_time())
+        // 定期发送pong消息以响应服务端的ping
+        // let pingInterval = setInterval(() => {
+        //   ws.send('pong')
+        //   log("client pong")
+        // }, 20000)  
+      }
+
+      wsonmessage = (msg) => {
+        callback(msg.data)
+      }
+
+      wsonclose = () => {
+        if (talking) {
+          log("连接断开，15秒后重连" + cur_time())
+          setTimeout(() => {
+            log("开始建立新连接" + cur_time())
+            connect()
+          }, 15000);  // 15秒后重连
+        } else {
+          log("连接关闭" + cur_time())
+        }
+      }
+
+      wsonerror = (err) => {
+        log('websocket error: ', err)
+      } 
+
+      cur_time = () => {
+        d = new Date()
+        return d.getHours() + ':' + d.getMinutes() + ':' + d.getSeconds()
+      }
+
+      showLoading = () => {
+        loading.style.display = 'block'
+      }
+
+      hideLoading = () => {
+        loading.style.display = 'none';  // 隐藏loading
+      }
+    </script>
 </html>

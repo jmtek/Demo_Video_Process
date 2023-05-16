@@ -95,9 +95,9 @@
         var audio_vocal = document.getElementById('vocal')
         var audio_no_vocal = document.getElementById('no_vocal')
 
-        audio_vocal.src = result[1]
+        audio_vocal.src = "http://{{server_root}}/" + result[1]
         audio_vocal.style.display = 'block'
-        audio_no_vocal.src = result[2]
+        audio_no_vocal.src = "http://{{server_root}}/" + result[2]
         audio_no_vocal.style.display = 'block'
       }
 

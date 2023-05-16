@@ -7,7 +7,7 @@ import requests
 from typing import Annotated
 from fastapi import FastAPI, Form, File, UploadFile
 
-from src.log import logger
+from src.log import errlogger as logger
 from src.video_func import separate_audio, inject_audio
 from src.audio_func import separate_vocals
 from src.transcript import transcript_with_segments
