@@ -25,6 +25,7 @@ errfh = logging.FileHandler('static/err.txt')
 errfh.setLevel(logging.ERROR)
 
 # 创建格式器
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(thread)d - %(message)s')
 errfh.setFormatter(formatter)
 
 # 添加处理器
