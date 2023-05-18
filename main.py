@@ -102,7 +102,7 @@ async def worker(websocket: WebSocket, token: Annotated[str, Depends(get_token)]
                 logger.debug(f"【客户端{token}】收到文件流，文件大小为：{len(data)}")
 
                 # 通知客户端
-                await manager.send_message(f"文件传输完成，文件大小为：{len(data)}", websocket)
+                await websocket.send_text(f"文件传输完成，文件大小为：{len(data)}，开始提取文字")
 
                 # 拼接保存路径 
                 save_path = os.path.join('static/upload', filename) 
@@ -141,7 +141,7 @@ async def worker(websocket: WebSocket, token: Annotated[str, Depends(get_token)]
                 logger.debug(f"【客户端{token}】收到文件流，文件大小为：{len(data)}")
 
                 # 通知客户端
-                await manager.send_message(f"文件传输完成，文件大小为：{len(data)}", websocket)
+                await websocket.send_text(f"文件传输完成，文件大小为：{len(data)}，开始分离音频")
 
                 # 拼接保存路径 
                 save_path = os.path.join('static/upload', filename) 
@@ -149,8 +149,6 @@ async def worker(websocket: WebSocket, token: Annotated[str, Depends(get_token)]
                     f.write(data) 
                 
                 logger.debug("【客户端{token}】保存文件成功")
-
-                # await manager.send_message("开始提取文字", websocket)
 
                 # 分离语音和背景音
                 new_audio = separate_vocals(save_path)
