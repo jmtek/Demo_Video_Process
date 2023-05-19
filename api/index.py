@@ -7,10 +7,10 @@ import requests
 from typing import Annotated
 from fastapi import FastAPI, Form, File, UploadFile
 
-from src.log import errlogger as logger
+from src.log import error
 from src.video_func import separate_audio, inject_audio
 from src.audio_func import separate_vocals
-from src.transcript import transcript_with_segments
+from src.transcript import transcribe
 from src.utilities import timed_func
 
 URL_BASE = "http://0.0.0.0/"
@@ -56,8 +56,8 @@ async def download_file(url):
                         # print(f'{downloaded}/{file_size}') 
                         
     except Exception as e:
-        logger.error("下载文件失败")
-        logger.error(e)
+        error("下载文件失败")
+        error(e)
         # 如果下载失败,删除空文件
         os.remove(file_name)
         file_name = ""
@@ -65,7 +65,7 @@ async def download_file(url):
     return file_name
     
 def bad_request_response(message: str, exception: Exception = None):
-    logger.error(f'{message}: {exception}')
+    error(f'{message}: {exception}')
     return {
         "code": 500,
         "message": message,
@@ -117,14 +117,13 @@ async def transcript_from_video(video_url: Annotated[str, Form()]):
         return bad_request_response("download video from url failed")
     try:
         audio = separate_audio(video_path)
-        result = transcript_with_segments(audio)
+        result = transcribe(audio)
         call_webhook(result)
         os.remove(audio)
     except Exception as e:
         return bad_request_response("视频转文字失败", e)
     # finally:
     #     os.remove(video_path)
-    logger.debug(str(result))
 
     return good_request_response(result)
 
@@ -134,7 +133,7 @@ async def transcript_from_video(audio_url: Annotated[str, Form()]):
     if audio == "":
         return bad_request_response("download audio from url failed")
     try:
-        result = transcript_with_segments(audio)
+        result = transcribe(audio)
         call_webhook(result)
     except Exception as e:
         return bad_request_response("音频转文字失败", e)
@@ -155,7 +154,7 @@ async def transcript_from_video(audio: UploadFile = File(...)):
         for chunk in iter(lambda: audio.file.read(1024 * 1024), b''):  
             f.write(chunk) 
     try:
-        result = transcript_with_segments(save_path)
+        result = transcribe(save_path)
         call_webhook(result)
     except Exception as e:
         return bad_request_response("音频转文字失败", e)

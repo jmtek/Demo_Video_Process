@@ -1,4 +1,5 @@
 import logging
+import traceback
 
 # 创建日志器
 logger = logging.getLogger('mylogger')
@@ -30,3 +31,6 @@ errfh.setFormatter(formatter)
 
 # 添加处理器
 errlogger.addHandler(errfh)
+
+def error(msg):
+    errlogger.error(f"{msg}\n{traceback.format_exc()}")

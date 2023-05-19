@@ -62,16 +62,6 @@
         display: none
       }
 
-      .player {
-        display: none;
-        border: 1px solid #ddd;
-        padding: 5px; 
-      }
-
-      .audio-desc {
-        margin-bottom: 5px;
-      }
-
       @media (max-width: 768px) { 
         .center {
             width: 90%;
@@ -87,29 +77,15 @@
   <body>
     <div class="container">
       <div class="center"> 
-        <h1>音频转文字 / 音频语音分离</h1>
-        <span>Step 1: </span>
-        <label for="audio_upload" class="upload-btn" tooltips="mp3、m4a、wav格式文件">选择一个音频文件</label>
-        <input type="file" name="file" id="audio_upload">
+        <h1>视频/音频的语音转文字</h1>
+        <label for="file_upload" class="upload-btn">选择一个音频或视频文件</label>
+        <input type="file" name="file" id="file_upload">
+        <button type="button" class="upload-btn ops-btn" id="uploadbutton" onclick="prepare()">语音文字提取</button>
         <br>
-        <br>
-        <span>Step 2: </span>
-        <button type="button" class="upload-btn ops-btn" id="uploadbutton1" onclick="prepare(1)">语音分离</button>
-        OR
-        <button type="button" class="upload-btn ops-btn" id="uploadbutton2" onclick="prepare(2)">语音文字提取</button>
         <br>
         <div id="loading" class="loading">服务器处理中，可能需要较长时间，请耐心等待...</div>
         <br>
-        <div id="vocal" class="player">
-          <p class="audio-desc">只保留人声的音频
-            <button type="button" class="upload-btn ops-btn" id="uploadbutton3" onclick="prepare(3)">直接提取文字</button></p>
-          <audio controls="" preload="metadata" src="" class="svelte-eemfgq" id="vocal_audio"></audio>
-        </div>
-        <div id="no_vocal" class="player">
-          <p class="audio-desc">去除人声后的音频</p>
-          <audio controls="" preload="metadata" src="" class="svelte-eemfgq" id="no_vocal_audio"></audio>
-        </div>
-        <textarea placeholder="请选择一个音频文件，语音文字会在此显示" id="transcriptresult"></textarea>
+        <textarea placeholder="请选择一个音频或视频文件" id="transcriptresult" readonly></textarea>
         <ul id='messages'>
         </ul>
       </div>
@@ -117,15 +93,12 @@
 
     <script>
       const debug = false
-      const audioupload = document.getElementById("audio_upload")
-      const vocalaudio = document.getElementById("vocal_audio")
+      const fileupload = document.getElementById("file_upload")
       const buttonuploads = document.querySelectorAll(".ops-btn")
       const loading = document.getElementById('loading')
 
       var ws = null
-      var wsurl = "ws://{{server_root}}/?token=" + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)
-      var startupmsg = ""
-      var sendfile = false
+      var wsurl = "ws://{{server_root}}/transcribe?token=" + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)
       var talking = false
 
       log = (msg) => {
@@ -140,32 +113,24 @@
       };
 
       callback = (msg) => {
-        recmsgprefix = msg.substring(0, 4)
-
-        if (recmsgprefix != "TRA_" && recmsgprefix != "SEP_"){
-          loading.innerText = msg
-          return
-        }
-
-        if (recmsgprefix == "TRA_") {
-          var textarea = document.getElementById('transcriptresult')
+        var textarea = document.getElementById('transcriptresult')
+        if (msg.substring(0, 10) == "TRA_FAILED"){
+          textarea.innerHTML = "操作失败"
+          switchButtonStatus(false)
+          hideLoading()
+        } else if (msg.substring(0, 10) == "TRA_RETURN"){
           textarea.innerHTML = msg.substring(msg.indexOf('\n')+1)
 
           switchButtonStatus(false)
-        } else if (recmsgprefix == "SEP_") {
-          result = msg.split("\n")
-          var audio_vocal = document.getElementById('vocal')
-          var audio_no_vocal = document.getElementById('no_vocal')
+          hideLoading()
 
-          audio_vocal.childNodes[3].src = "http://{{server_root}}/" + result[1]
-          audio_vocal.style.display = 'block'
-          audio_no_vocal.childNodes[3].src = "http://{{server_root}}/" + result[2]
-          audio_no_vocal.style.display = 'block'
-        } 
-        
-        switchButtonStatus(false)
-        hideLoading()
-        ws.send("gothca") //tell server it's done
+          // create buffer for msg
+          let buffer = new ArrayBuffer(1)
+          // write command
+          new Uint8Array(buffer, 0, 1).set(new TextEncoder().encode('A'));
+          // tell server it's done
+          ws.send(buffer) 
+        }
       }
 
       switchButtonStatus = (disabled) => {
@@ -177,29 +142,19 @@
         )
       }
 
-      prepare = (op) => {
+      prepare = () => {
 
         switchButtonStatus(true)
 
-        if (op == 1 || op == 2) {
-          if (audioupload.files.length != 1){
-            alert("先选择一个音频文件")
-            return;
-          }
+        if (fileupload.files.length != 1){
+          alert("先选择一个音频文件")
+          return;
+        }
 
-          filetype = audioupload.files[0].name.split('.')[1]
-          if (filetype != 'mp3' && filetype != 'm4a' && filetype != 'wav') {
-            alert("目前只支持mp3、m4a、wav文件")
-            return
-          }
-
-          startupmsg = (op == 1 ? "separatevocal:" : "transcript_upload:") + audioupload.files[0].name
-          sendfile = true
-        } else if (op == 3) {
-          vocalpath = vocalaudio.src.substring(7)
-          vocalpath = vocalpath.substring(vocalpath.indexOf('/') + 1)
-          startupmsg = "transcript_local:" + vocalpath
-          sendfile = false
+        filetype = fileupload.files[0].name.split('.')[1].toLowerCase()
+        if (filetype.match(/\.(mp3|m4a|wav|webp|flv|mpeg|mp4|avi|wmv|mov)$/i)) {
+          alert("选择的文件格式不支持")
+          return
         }
 
         if (!ws || ws.readyState != WebSocket.OPEN) {
@@ -235,20 +190,44 @@
 
       send_data = () => {
         showLoading()
-        // 发送文件名
-        ws.send(startupmsg)
 
-        if (!sendfile)
-          return
+        let file = fileupload.files[0]
 
         // 读取文件内容
         const reader = new FileReader()
         reader.onload = (e) => {
-            // 文件内容读取完成,发送到服务端
-            ws.send(e.target.result) 
+          // Convert strings to Uint8Array
+          let encoder = new TextEncoder()
+          let commandData = encoder.encode('U'); // U for upload
+          let fileNameData = encoder.encode(file.name)
+          let fileTypeData = encoder.encode(file.type)
+
+          // Create buffer for message
+          let len = 9 + fileNameData.length + fileTypeData.length + e.target.result.byteLength
+          let buffer = new ArrayBuffer(len)
+          let view = new DataView(buffer)
+
+          // Write command
+          new Uint8Array(buffer, 0, 1).set(commandData);
+
+          // Write lengths
+          view.setUint32(1, fileNameData.length, true);
+          view.setUint32(5, fileTypeData.length, true);
+
+          // Write string data
+          let pos = 9;
+          new Uint8Array(buffer, pos, fileNameData.length).set(fileNameData);
+          pos += fileNameData.length;
+          new Uint8Array(buffer, pos, fileTypeData.length).set(fileTypeData);
+          pos += fileTypeData.length;
+          // Write file data
+          new Uint8Array(buffer, pos).set(new Uint8Array(e.target.result));
+
+          // Send the message
+          ws.send(buffer);
         }
 
-        reader.readAsArrayBuffer(audioupload.files[0])
+        reader.readAsArrayBuffer(file)
       }
 
       wsonopen = () => {
@@ -277,7 +256,7 @@
       }
 
       wsonerror = (err) => {
-        log('websocket error: ', err)
+        log('websocket error: ' + err)
       } 
 
       cur_time = () => {

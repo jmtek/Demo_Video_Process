@@ -68,10 +68,10 @@ class ConnectionManager:
         await websocket.send_text(message)
 
     def clear_suspend_msg(self, token: str):
-        logger.debug(f"收到客户端({token})回调")
+        logger.debug(f"【客户端({token})】收到回调")
         for connection in self.active_connections:
             if connection["token"] == token:
-                logger.debug("清空暂存信息")
+                logger.debug(f"【客户端({token})】清空暂存信息")
                 connection["pending_msg"] = ""
 
     async def broadcast(self, message: str):
