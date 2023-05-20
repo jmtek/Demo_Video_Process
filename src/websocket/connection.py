@@ -38,7 +38,7 @@ class ConnectionManager:
                 # 这里不做break是为了避免相同token建立过多次连接，从而将相同token的连接都移除，并取最后一个连接的暂存信息进行重发
             
         await websocket.accept()
-        logger.debug(f"与客户端{token}连接成功")
+        logger.debug(f"与客户端{token}连接成功，IP为{websocket.client.host}")
         self.active_connections.append({
             "token": token,
             "connection": websocket,
