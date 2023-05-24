@@ -78,6 +78,9 @@
     <div class="container">
       <div class="center"> 
         <h1>视频/音频的语音转文字</h1>
+        <div>➠ 支持的视频格式包括mp4、mov、avi、wmv等，支持的音频格式包括mp3、m4a、wav、webm等</div>
+        <div>➠ 目前只提供语音转中文文字</div>
+        <div>&nbsp;</div>
         <label for="file_upload" class="upload-btn">选择一个音频或视频文件</label>
         <input type="file" name="file" id="file_upload">
         <button type="button" class="upload-btn ops-btn" id="uploadbutton" onclick="prepare()">语音文字提取</button>
@@ -88,6 +91,11 @@
         <textarea placeholder="请选择一个音频或视频文件" id="transcriptresult" readonly></textarea>
         <ul id='messages'>
         </ul>
+        <h1>小宇宙音频下载</h1>
+        <form action="http://{{server_root}}/xyz/download" target="_blank" method="get">
+          <input type="textbox" name="url" size="80" placeholder="输入小宇宙podcast的分享连接地址">
+          <input type="submit" value="下载">
+        </form>
       </div>
     </div>
 

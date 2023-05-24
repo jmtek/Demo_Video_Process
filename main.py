@@ -1,6 +1,9 @@
 import os
 import uuid
 
+import io
+import requests
+
 from typing import Annotated
 from pathlib import Path
 
@@ -14,7 +17,7 @@ from fastapi import (
     WebSocketDisconnect,
     WebSocketException
 )
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 # from fastapi.templating import Jinja2Templates
 
@@ -26,6 +29,8 @@ from src.log import logger, errlogger
 from src.video_func import separate_audio, inject_audio
 from src.audio_func import separate_vocals
 from src.transcript import transcribe
+
+from src.xyz.crawler import parse_html
 
 from src.websocket.connection import manager, get_token, ConnectionManager
 
@@ -237,26 +242,33 @@ async def worker(websocket: WebSocket, token: Annotated[str, Depends(get_token)]
                 manager.disconnect(websocket)
             break
 
-# 将视频的人声去除
-@app.get("/removevocal/upload", response_class=HTMLResponse)
-async def removevoal(request: Request):
-    video = None if len(videos) == 0 else videos[len(videos)-1:][0]
-    return templates.TemplateResponse(
-        "video.html", {"request": request, "video": video})
+@app.get("/xyz/getaudio")
+def get_xyz_audio(url):
+    # 抓取页面并分析获得音频地址
+    audio_urls = parse_html(url)
+    if len(audio_urls) == 0:
+        return RedirectResponse(url='/', status_code=303)
+    return RedirectResponse(url=audio_urls[0], status_code=303)
 
-@app.post("/removevocal/upload")
-async def removevoal(video: UploadFile = File(...)):
-    # 保存到本地
-    save_path = save_upload_file(video)
-    # 分离音频
-    old_audio = separate_audio(save_path)
-    # 分离语音和背景音
-    voc_audio, no_voc_audio = separate_vocals(old_audio)
-    # 重新生成新视频
-    new_video = inject_audio(no_voc_audio, save_path)
+@app.get("/xyz/download")
+def download_xyz_audio(url):
+    # 抓取页面并分析获得音频地址
+    audio_urls = parse_html(url)
+    if len(audio_urls) == 0:
+        return RedirectResponse(url='/', status_code=303)
+    
+    response = requests.get(audio_urls[0], stream=True)
+    response.raise_for_status()
 
-    videos.append(new_video)
-    return RedirectResponse(url='/removevocal/upload', status_code=303)
+    file_stream = io.BytesIO()
+    for chunk in response.iter_content(chunk_size=8192):
+        file_stream.write(chunk)
+    file_stream.seek(0)
+    
+    sresponse = StreamingResponse(file_stream, media_type="application/octet-stream")
+    sresponse.headers["Content-Disposition"] = f"attachment; filename={url.split('/')[-1]}.{audio_urls[0].split('.')[-1]}"
+
+    return sresponse
 
 
 config = Config(app, host='127.0.0.1', port=8000)  
@@ -266,3 +278,4 @@ try:
     server.run()  
 except Exception as exc:
     logger.error(f'Error occurred: {exc}')
+
