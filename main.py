@@ -29,6 +29,7 @@ from src.log import logger, errlogger
 from src.video_func import separate_audio, inject_audio
 from src.audio_func import separate_vocals
 from src.transcript import transcribe
+from src.utilities import timed_func
 
 from src.xyz.crawler import parse_html
 
@@ -242,16 +243,20 @@ async def worker(websocket: WebSocket, token: Annotated[str, Depends(get_token)]
                 manager.disconnect(websocket)
             break
 
+@timed_func
 @app.get("/xyz/getaudio")
 def get_xyz_audio(url):
+    logger.debug(f"getaudio xyz: {url}")
     # 抓取页面并分析获得音频地址
     audio_urls = parse_html(url)
     if len(audio_urls) == 0:
         return RedirectResponse(url='/', status_code=303)
     return RedirectResponse(url=audio_urls[0], status_code=303)
 
+@timed_func
 @app.get("/xyz/download")
 def download_xyz_audio(url):
+    logger.debug(f"download xyz: {url}")
     # 抓取页面并分析获得音频地址
     audio_urls = parse_html(url)
     if len(audio_urls) == 0:
