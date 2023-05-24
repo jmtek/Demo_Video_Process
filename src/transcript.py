@@ -16,7 +16,8 @@ from src.config import (
     TRANS_GPU_ACC
 )
 from src.log import logger, error
-from src.video_func import separate_audio
+# from src.video_func import separate_audio
+from src.webhook import call_webhook
 
 def load_model():
     model = whisper.load_model(WHISPER_MODEL)
@@ -25,8 +26,7 @@ def load_model():
 SAMPLE_RATE = 16000
 CHUNK_LENGTH = 30
 
-if TRANS_USE_API == False:
-    model = load_model()
+model = load_model()
 
 def ping(name):
     url = f'https://huggingface.co/api/telemetry/spaces/jmtek/whisper/{name}'
@@ -84,13 +84,12 @@ def transcribe(file_path: str):
     logger.debug("Retry use local model" if TRANS_USE_API else "Transcript use local model")
 
     try:
-        if TRANS_USE_API:
-            model = load_model()
-
         audio = whisper.load_audio(str(path.resolve()))
 
         # fp16 should be False if use CPU as it is not supported on CPU
         result = model.transcribe(audio, verbose=WHISPER_VERBOSE, fp16 = TRANS_GPU_ACC, language = "zh")
+
+        call_webhook("transcript", { "file": str(path), "result": str(result) })
 
         return {
             "text": result["text"],

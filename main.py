@@ -26,12 +26,13 @@ from uvicorn import Config, Server
 from src.config import WS_SERVER_ROOT
 from src.log import logger, errlogger
 
-from src.video_func import separate_audio, inject_audio
-from src.audio_func import separate_vocals
+# from src.video_func import separate_audio, inject_audio
+# from src.audio_func import separate_vocals
 from src.transcript import transcribe
-from src.utilities import timed_func
+# from src.utilities import timed_func
 
-from src.xyz.crawler import parse_html
+from src.xyz.crawler import get_audio_stream
+from src.webhook import call_webhook
 
 from src.websocket.connection import manager, get_token, ConnectionManager
 
@@ -243,37 +244,27 @@ async def worker(websocket: WebSocket, token: Annotated[str, Depends(get_token)]
                 manager.disconnect(websocket)
             break
 
-@timed_func
 @app.get("/xyz/getaudio")
 def get_xyz_audio(url):
     logger.debug(f"getaudio xyz: {url}")
     # 抓取页面并分析获得音频地址
-    audio_urls = parse_html(url)
+    audio_urls = get_audio_stream(url)
     if len(audio_urls) == 0:
         return RedirectResponse(url='/', status_code=303)
     return RedirectResponse(url=audio_urls[0], status_code=303)
 
-@timed_func
 @app.get("/xyz/download")
 def download_xyz_audio(url):
     logger.debug(f"download xyz: {url}")
     # 抓取页面并分析获得音频地址
-    audio_urls = parse_html(url)
-    if len(audio_urls) == 0:
+    stream, ext = get_audio_stream(url)
+    if stream is None:
         return RedirectResponse(url='/', status_code=303)
     
-    response = requests.get(audio_urls[0], stream=True)
-    response.raise_for_status()
+    response = StreamingResponse(stream, media_type="application/octet-stream")
+    response.headers["Content-Disposition"] = f"attachment; filename={url.split('/')[-1]}.{ext}"
 
-    file_stream = io.BytesIO()
-    for chunk in response.iter_content(chunk_size=8192):
-        file_stream.write(chunk)
-    file_stream.seek(0)
-    
-    sresponse = StreamingResponse(file_stream, media_type="application/octet-stream")
-    sresponse.headers["Content-Disposition"] = f"attachment; filename={url.split('/')[-1]}.{audio_urls[0].split('.')[-1]}"
-
-    return sresponse
+    return response
 
 
 config = Config(app, host='127.0.0.1', port=8000)  

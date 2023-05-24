@@ -1,6 +1,8 @@
-import requests
+import requests, io
+from src.utilities import timed_func
 
-def parse_html(url):
+@timed_func
+def get_audio_stream(url):
     response = requests.get(url)
     html = response.text
 
@@ -26,4 +28,15 @@ def parse_html(url):
         # move to the next position
         start_pos = url_end_pos
 
-    return m4a_urls
+    if len(m4a_urls) == 0:
+        return None, None
+
+    response = requests.get(m4a_urls[0], stream=True)
+    response.raise_for_status()
+
+    file_stream = io.BytesIO()
+    for chunk in response.iter_content(chunk_size=8192):
+        file_stream.write(chunk)
+    file_stream.seek(0)
+
+    return file_stream, m4a_urls[0].split(".")[-1]

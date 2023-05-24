@@ -16,10 +16,10 @@ WHISPER_VERBOSE = os.environ.get("WHISPER_VERBOSE") and bool(os.environ["WHISPER
 WHISPER_MODEL = os.environ["WHISPER_MODEL"] if os.environ.get("WHISPER_MODEL") else "base"
 
 # 基于HF Space的API
-TRANS_USE_API = os.environ.get("TRANS_USE_API") and bool(os.environ["TRANS_USE_API"])
+TRANS_USE_API = os.environ.get("TRANS_USE_API") and (True if os.environ["TRANS_USE_API"] == "True" else False)
 
 # 用DEMUCS分离音频时是否启用内置的FFMPEG自动转换音频
-AUDIO_SEP_DOCONVER = os.environ.get("AUDIO_SEP_DOCONVER") and bool(os.environ["AUDIO_SEP_DOCONVER"])
+AUDIO_SEP_DOCONVER = os.environ.get("AUDIO_SEP_DOCONVER") and (True if os.environ["AUDIO_SEP_DOCONVER"] == "True" else False)
 
 # 使用本地Whisper模型时是否启用GPU加速
-TRANS_GPU_ACC = os.environ.get("TRANS_GPU_ACC") and bool(os.environ["TRANS_GPU_ACC"])
+TRANS_GPU_ACC = os.environ.get("TRANS_GPU_ACC") and (True if os.environ["TRANS_GPU_ACC"] == "True" else False)
