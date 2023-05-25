@@ -26,7 +26,7 @@ from fastapi.staticfiles import StaticFiles
 from uvicorn import Config, Server
 
 from src.config import WS_SERVER_ROOT
-from src.log import logger, errlogger
+from src.log import logger, error
 
 # from src.video_func import separate_audio, inject_audio
 # from src.audio_func import separate_vocals
@@ -107,7 +107,7 @@ async def handle_message(data: bytes, manager: ConnectionManager, token: str, we
             fileData = data[fileData_start:]
             logger.debug(f"【客户端{token}】解析数据完成，文件名：{fileName}，文件类型：{fileType}")
         except Exception as e:
-            errlogger.error(f"【客户端{token}】解析数据失败：{str(e)}")
+            error(f"【客户端{token}】解析数据失败：{str(e)}")
             return
 
         file_name = str(uuid.uuid1()) + '.' + fileName.split(".")[-1:][0] # [-1:]防止文件名带'.'，取split之后数组的最后一个元素
@@ -117,7 +117,7 @@ async def handle_message(data: bytes, manager: ConnectionManager, token: str, we
         save_path = upload_path / file_name
 
         if not save_path.name.lower().endswith(('.mp4', '.avi', '.wmv', '.mov', '.flv', '.mpeg', '.mp3', '.m4a', '.wav')):
-            logger.error(f"【客户端{token}】上传的不是一个有效格式的文件({fileName})")
+            error(f"【客户端{token}】上传的不是一个有效格式的文件({fileName})")
             return
 
         logger.debug(f"【客户端{token}】收到文件流，文件大小为：{len(fileData)}")
@@ -158,35 +158,32 @@ async def handle_message(data: bytes, manager: ConnectionManager, token: str, we
 
         await manager.send_message(msg, websocket)
 
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return templates.TemplateResponse(
-        "home.html", {"request": request, "server_root": WS_SERVER_ROOT})
-
 # websocket接口
 @app.websocket("/transcribe")
 async def wsworker(websocket: WebSocket, token: Annotated[str, Depends(get_token)]): 
     try:
         await manager.connect(websocket, token)
     except WebSocketDisconnect as e:
-        errlogger.error(f"与客户端建立连接发生异常: {e}")
+        error(f"与客户端建立连接发生异常: {e}")
         manager.disconnect(websocket)
 
     # callback_code = ""
     while True:
-        msg = ""
         try:
             data = await websocket.receive_bytes()
 
+            logger.debug(f"收到客户端字节流，长度{len(data)}")
+
             await handle_message(data, manager, token, websocket)
-        except WebSocketDisconnect as wsd:
-            errlogger.debug(f"error: {token} disconnected")
-            manager.disconnect(websocket)
-            break
+        # except WebSocketDisconnect as wsd:
+        #     error(f"error: {token} disconnected")
+        #     manager.disconnect(websocket)
+        #     break
         except Exception as e:
-            errlogger.error(f"unexpect error: {e}")
+            error(f"unexpect error: {e}")
             try:
-                await websocket.send_text("TRAN_FAILED")
+                if websocket.client_state['is_connected']:
+                    await websocket.send_text("TRAN_FAILED")
             finally:
                 manager.disconnect(websocket)
             break
@@ -195,6 +192,31 @@ async def wsworker(websocket: WebSocket, token: Annotated[str, Depends(get_token
 def get_transcription(task_id: str):
     result = celery_app.AsyncResult(task_id)
     return {"task_id": task_id, "status": result.status, "result": result.result}
+
+@app.post("/upload")
+async def upload_file(upload: UploadFile = File(...)):
+    # 生成文件名
+    filename = str(uuid.uuid1()) + '.' + upload.filename.split(".")[1]
+    # 拼接保存路径 
+    save_path = upload_path / filename
+
+    if not save_path.name.lower().endswith(('.mp4', '.avi', '.wmv', '.mov', '.flv', '.mpeg', '.mp3', '.m4a', '.wav')):
+        logger.debug(f"上传的不是一个有效格式的文件({upload.filename})")
+        return
+    
+    # 保存文件 
+    with open(save_path, 'wb') as f:
+        # 从SpooledTemporaryFile读取内容并写入
+        for chunk in iter(lambda: upload.file.read(1024 * 1024), b''):  
+            f.write(chunk) 
+
+    logger.debug(f"保存文件成功")
+
+    # 发起后台执行任务
+    result = celery_app.send_task('transcribe_task', args=[str(save_path)])
+    logger.debug(f"start run task#{result.id}")
+
+    return RedirectResponse(url=f"/transcript/{result.id}", status_code=303)
 
 @app.get("/xyz/getaudio")
 def get_xyz_audio(url):
@@ -219,11 +241,17 @@ def download_xyz_audio(url):
     return response
 
 
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    return templates.TemplateResponse(
+        "home.html", {"request": request, "server_root": WS_SERVER_ROOT})
+
+
 config = Config(app, host='127.0.0.1', port=8000)  
 server = Server(config)  
 
 try:   
     server.run()  
 except Exception as exc:
-    logger.error(f'Error occurred: {exc}')
+    error(f'Server Fatal Error Occurred: {exc}')
 

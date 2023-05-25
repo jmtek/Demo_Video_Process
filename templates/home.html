@@ -239,6 +239,8 @@
           // Write file data
           new Uint8Array(buffer, pos).set(new Uint8Array(e.target.result));
 
+          console.log("sending data")
+          console.log(buffer)
           // Send the message
           ws.send(buffer);
         }
