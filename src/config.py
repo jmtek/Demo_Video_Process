@@ -9,6 +9,9 @@ WS_SERVER_ROOT = os.environ["WS_SERVER_ROOT"] if os.environ.get("WS_SERVER_ROOT"
 # HuggingFace Token
 HF_TOKEN = os.environ["HF_TOKEN"] if os.environ.get("HF_TOKEN") else ""
 
+# IFTTT WEBHOOK TOKEN
+IFTTT_TOKEN = os.environ["IFTTT_TOKEN"] if os.environ.get("IFTTT_TOKEN") else ""
+
 # 如果使用本地Whisper模型，是否输出debug信息
 WHISPER_VERBOSE = os.environ.get("WHISPER_VERBOSE") and bool(os.environ["WHISPER_VERBOSE"])
 

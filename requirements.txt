@@ -9,3 +9,4 @@ langchain
 websockets
 python-dotenv
 gradio_client
+celery

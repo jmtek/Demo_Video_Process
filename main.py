@@ -2,6 +2,7 @@ import os
 import uuid
 
 import io
+import asyncio
 import requests
 
 from typing import Annotated
@@ -42,6 +43,8 @@ from api.index import app
 
 import struct
 
+from celery import Celery
+
 # from gradio_client import Client
 
 # client = Client("abidlabs/music-separation")
@@ -49,6 +52,9 @@ import struct
 # def acapellify(audio_path):
 #     # result = client.predict(audio_path, api_name="/predict")
 #       return result
+
+# 创建一个Celery实例
+celery_app = Celery('worker', broker='pyamqp://guest@localhost//', backend='rpc://')
 
 if not Path("./static"):
     os.makedirs("static")
@@ -59,18 +65,18 @@ if not upload_path.exists():
 # os.makedirs("static", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-def save_upload_file(upload: UploadFile = File(...)):
-    # 生成文件名
-    filename = str(uuid.uuid1()) + '.' + upload.filename.split(".")[1]
-    # 拼接保存路径 
-    save_path = os.path.join('static/upload', filename) 
-    # 保存文件 
-    with open(save_path, 'wb') as f:
-        # 从SpooledTemporaryFile读取内容并写入
-        for chunk in iter(lambda: upload.file.read(1024 * 1024), b''):  
-            f.write(chunk) 
+# def save_upload_file(upload: UploadFile = File(...)):
+#     # 生成文件名
+#     filename = str(uuid.uuid1()) + '.' + upload.filename.split(".")[1]
+#     # 拼接保存路径 
+#     save_path = os.path.join('static/upload', filename) 
+#     # 保存文件 
+#     with open(save_path, 'wb') as f:
+#         # 从SpooledTemporaryFile读取内容并写入
+#         for chunk in iter(lambda: upload.file.read(1024 * 1024), b''):  
+#             f.write(chunk) 
 
-    return save_path
+#     return save_path
 
 async def handle_message(data: bytes, manager: ConnectionManager, token: str, websocket: WebSocket):
     logger.debug(f"【客户端{token}】收到数据长度{len(data)}")
@@ -120,17 +126,34 @@ async def handle_message(data: bytes, manager: ConnectionManager, token: str, we
         
         logger.debug(f"【客户端{token}】保存文件成功")
 
-        # 提取语音文字
-        transcription = transcribe(save_path)
+        # # 提取语音文字
+        # transcription = transcribe(save_path)
 
-        if transcription is None:
+        # 发起后台执行任务
+        result = celery_app.send_task('transcribe_task', args=[str(save_path)])
+        logger.debug(f"start run task#{result.id}")
+
+        # 启动一个循环，检查任务状态，控制超时时间
+        timeout = 600
+        while not result.ready():
+            if timeout <= 0:
+                break
+            # 每秒检查一次任务状态
+            await asyncio.sleep(1)
+            timeout = timeout - 1
+        
+        if not result.ready():
             logger.debug(f"【客户端{token}】文字提取失败")
             return
 
-        logger.debug(f"【客户端{token}】文字提取成功：\n{transcription}")
+        # if transcription is None:
+        #     logger.debug(f"【客户端{token}】文字提取失败")
+        #     return
+
+        logger.debug(f"【客户端{token}】文字提取成功：\n{str(result.result)}")
 
         # callback_code = str(uuid.uuid4())
-        msg = f'TRA_RETURN:{fileName}的文字提取完成\n{transcription["text_plus_timeline"]}'
+        msg = f'TRA_RETURN:{fileName}的文字提取完成\n{result.result["text_plus_timeline"]}\n===纯文字部分===\n{result.result["text_with_splitter"]}'
 
         await manager.send_message(msg, websocket)
 
@@ -141,7 +164,7 @@ async def home(request: Request):
 
 # websocket接口
 @app.websocket("/transcribe")
-async def worker(websocket: WebSocket, token: Annotated[str, Depends(get_token)]): 
+async def wsworker(websocket: WebSocket, token: Annotated[str, Depends(get_token)]): 
     try:
         await manager.connect(websocket, token)
     except WebSocketDisconnect as e:
@@ -155,83 +178,6 @@ async def worker(websocket: WebSocket, token: Annotated[str, Depends(get_token)]
             data = await websocket.receive_bytes()
 
             await handle_message(data, manager, token, websocket)
-
-            # singal_text = await websocket.receive_text()
-
-            # if singal_text == "duang":
-            #     logger.debug("结束连接")
-            #     manager.disconnect(websocket)
-            #     return
-            
-            # if singal_text.startswith("gothca"):
-            #     # if callback_code == "":
-            #     #   serverside new websocket process
-            #     # elif singal_text == f"gothca_{callback_code}":
-            #     #   same websocket
-            #     manager.clear_suspend_msg(token)
-            #     continue
-            # elif singal_text.startswith("TRA_UPLOAD:"):
-            #     filename = singal_text.split(':')[1]
-            #     filename = str(uuid.uuid1()) + '.' + filename.split(".")[-1:][0] # [-1:]防止文件名带'.'，取split之后数组的最后一个元素
-            #     logger.debug(f"【客户端{token}】生成文件名：{filename}")
-
-            #     # 拼接保存路径 
-            #     save_path = upload_path / filename
-
-            #     if not save_path.name.lower().endswith(('.mp4', '.avi', '.wmv', '.mov', '.flv', '.mpeg', '.mp3', '.m4a', '.wav')):
-            #         logger.error(f"【客户端{token}】上传的不是一个有效格式的文件({singal_text})")
-            #         continue
-
-            #     data = await websocket.receive_bytes()
-
-            #     logger.debug(f"【客户端{token}】收到文件流，文件大小为：{len(data)}")
-
-            #     # 通知客户端
-            #     await websocket.send_text(f"文件传输完成，文件大小为：{len(data)}，开始提取文字")
-
-            #     with open(str(save_path.resolve()), 'wb') as f:
-            #         f.write(data) 
-                
-            #     logger.debug(f"【客户端{token}】保存文件成功")
-
-            #     # await manager.send_message("开始提取文字", websocket)
-
-            #     # 提取语音文字
-            #     transcription = transcribe(save_path)
-
-            #     logger.debug(f"【客户端{token}】文字提取成功：\n{transcription}")
-
-            #     # callback_code = str(uuid.uuid4())
-            #     msg = f'TRA_RETURN:{singal_text}的文字提取完成\n{transcription["text_plus_timeline"]}'
-            #  elif singal_text.startswith("separatevocal:"):
-            #     filename = singal_text.split(':')[1]
-            #     filename = str(uuid.uuid1()) + '.' + filename.split(".")[-1:][0] # [-1:]防止文件名带'.'，取split之后数组的最后一个元素
-            #     logger.debug(f"【客户端{token}】生成文件名：{filename}")
-
-            #     data = await websocket.receive_bytes()
-
-            #     logger.debug(f"【客户端{token}】收到文件流，文件大小为：{len(data)}")
-
-            #     # 通知客户端
-            #     await websocket.send_text(f"文件传输完成，文件大小为：{len(data)}，开始分离音频")
-
-            #     # 拼接保存路径 
-            #     save_path = os.path.join('static/upload', filename) 
-            #     with open(save_path, 'wb') as f:
-            #         f.write(data) 
-                
-            #     logger.debug("【客户端{token}】保存文件成功")
-
-            #     # 分离语音和背景音
-            #     new_audio = separate_vocals(save_path)
-
-            #     logger.debug(f"【客户端{token}】音频分离成功：\n{new_audio[0]}\n{new_audio[1]}")
-
-            #     # callback_code = str(uuid.uuid4())
-            #     msg = f'SEP:{singal_text}的音频分离完成\n{new_audio[0]}\n{new_audio[1]}'
-
-            # if msg != "":
-            #     await manager.send_message(msg, websocket)
         except WebSocketDisconnect as wsd:
             errlogger.debug(f"error: {token} disconnected")
             manager.disconnect(websocket)
@@ -243,6 +189,11 @@ async def worker(websocket: WebSocket, token: Annotated[str, Depends(get_token)]
             finally:
                 manager.disconnect(websocket)
             break
+
+@app.get("/transcript/{task_id}")
+def get_transcription(task_id: str):
+    result = celery_app.AsyncResult(task_id)
+    return {"task_id": task_id, "status": result.status, "result": result.result}
 
 @app.get("/xyz/getaudio")
 def get_xyz_audio(url):
