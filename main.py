@@ -1,14 +1,15 @@
 import os
 import uuid
 
-import io
+# import io
 import asyncio
-import requests
+# import requests
 
 from typing import Annotated
 from pathlib import Path
 
 from fastapi import (
+    FastAPI,
     File, 
     UploadFile, 
     Cookie,
@@ -29,21 +30,21 @@ from src.log import logger, errlogger
 
 # from src.video_func import separate_audio, inject_audio
 # from src.audio_func import separate_vocals
-from src.transcript import transcribe
+# from src.transcript import transcribe
 # from src.utilities import timed_func
 
 from src.xyz.crawler import get_audio_stream
-from src.webhook import call_webhook
+# from src.webhook import call_webhook
 
 from src.websocket.connection import manager, get_token, ConnectionManager
 
 from templates.Jinja2 import templates
 
-from api.index import app
-
 import struct
 
 from celery import Celery
+
+app=FastAPI()
 
 # from gradio_client import Client
 

@@ -18,6 +18,7 @@ from src.config import (
 from src.log import logger, error
 # from src.video_func import separate_audio
 from src.webhook import call_webhook
+from src.utilities import timed_func
 
 def load_model():
     model = whisper.load_model(WHISPER_MODEL)
@@ -25,11 +26,12 @@ def load_model():
 
 SAMPLE_RATE = 16000
 CHUNK_LENGTH = 30
+HF_API_PATH = "jmtek/whisper"
 
 model = load_model()
 
 def ping(name):
-    url = f'https://huggingface.co/api/telemetry/spaces/jmtek/whisper/{name}'
+    url = f'https://huggingface.co/api/telemetry/spaces/{HF_API_PATH}/{name}'
     print("ping: ", url)
 
     async def req():
@@ -41,7 +43,6 @@ def ping(name):
 def format_time(num_str):
     return time.strftime('%H:%M:%S', time.gmtime(int(num_str)))
 
-from src.utilities import timed_func
 
 @timed_func
 def decode_by_local_model(voc_audio: str, length: int = CHUNK_LENGTH):
@@ -76,7 +77,7 @@ def transcribe(file_path: str):
         ping(f"transcribe_{'video' if video else 'audio'}")
         logger.debug("Transcript use api")
         try:
-            client = Client("jmtek/whisper", hf_token=HF_TOKEN)
+            client = Client(HF_API_PATH, hf_token=HF_TOKEN)
             return client.predict(str(path.resolve()), api_name="/transcribe_video" if video else "/transcribe_audio")
         except Exception:
             error("HF API返回异常")
